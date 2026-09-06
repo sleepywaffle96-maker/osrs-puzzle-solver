@@ -3,45 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Ultimate Universal Puzzle Solver</title>
+    <title>OSRS Exact Slider Solver</title>
+    <!-- Inclusione delle librerie per il ritaglio grafico rapido da mobile -->
+    <link href="https://jsdelivr.net" rel="stylesheet">
+    <script src="https://jsdelivr.net"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a1a; color: #fff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        h1 { font-size: 1.5rem; color: #ffae00; margin: 10px 0; font-weight: bold; text-shadow: 2px 2px #000; text-align: center; }
-        p { font-size: 0.85rem; color: #bbb; text-align: center; margin: 0 0 15px 0; max-width: 350px; }
+        h1 { font-size: 1.4rem; color: #ffae00; margin: 10px 0; font-weight: bold; text-align: center; }
+        p { font-size: 0.85rem; color: #bbb; text-align: center; margin: 0 0 15px 0; max-width: 320px; }
         
-        .upload-container { width: 100%; max-width: 350px; background: #2a2a2a; border: 2px dashed #ffae00; border-radius: 8px; padding: 20px; text-align: center; }
+        .upload-container { width: 100%; max-width: 350px; background: #2a2a2a; border: 2px dashed #ffae00; border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 15px; }
         #file-input { display: none; }
-        .upload-btn { display: inline-block; background: #ffae00; color: #000; padding: 14px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; }
-        #status { font-weight: bold; color: #007bff; margin-top: 10px; font-size: 0.9rem; }
+        .upload-btn { display: inline-block; background: #ffae00; color: #000; padding: 12px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; font-size: 0.95rem; }
+        #status { font-weight: bold; color: #ffae00; margin-top: 8px; font-size: 0.85rem; }
         
+        .crop-wrapper { max-width: 100%; width: 320px; margin: 10px 0; display: none; background: #000; border-radius: 6px; overflow: hidden; }
+        #crop-image { max-width: 100%; display: block; }
+
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; max-width: 320px; margin-top: 15px; background: #0b0b0b; padding: 4px; border-radius: 6px; display: none; }
         .cell { aspect-ratio: 1; background: #333; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
         .cell canvas { width: 100%; height: 100%; object-fit: cover; }
-        .cell-number { position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; padding: 1px 3px; border-radius: 3px; font-family: monospace; }
+        .cell-number { position: absolute; bottom: 2px; right: 4px; background: rgba(0,0,0,0.8); color: #ffae00; font-size: 11px; padding: 1px 3px; border-radius: 3px; font-family: monospace; font-weight: bold; }
         
         .action-btn { width: 100%; max-width: 320px; margin-top: 15px; padding: 14px; font-size: 1rem; font-weight: bold; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; display: none; }
         #solution { margin-top: 15px; background: #111; padding: 15px; border-radius: 6px; width: 100%; max-width: 320px; font-size: 0.95rem; line-height: 1.4; border-left: 4px solid #28a745; display: none; }
-        .step-list { margin: 8px 0 0 0; padding-left: 20px; font-family: monospace; font-size: 1.05rem; }
+        .step-badge { background: #ffae00; color: #000; padding: 3px 6px; border-radius: 4px; font-weight: bold; margin: 2px; display: inline-block; font-family: monospace; }
     </style>
 </head>
 <body>
 
-    <h1>🧩 OSRS Universal Clue Solver</h1>
-    <p>Carica lo screenshot ritagliato sul bordo del quadrato del puzzle. Il sistema rileverà automaticamente il tipo di enigma (Albero, Zulrah, Vorkath, Mappe, ecc.).</p>
+    <h1>🧩 OSRS Auto Crop Solver</h1>
+    <p>1. Carica lo screenshot intero.<br>2. Trascina i bordi del quadrato per racchiudere **solo** le tessere del puzzle.<br>3. Premi il tasto verde.</p>
 
     <div class="upload-container">
-        <label for="file-input" class="upload-btn">📸 Upload puzzle screenshot!</label>
+        <label for="file-input" class="upload-btn">📸 Upload an image!</label>
         <input type="file" id="file-input" accept="image/*">
-        <div id="status">In attesa dell'immagine...</div>
+        <div id="status">In attesa dello screenshot...</div>
     </div>
 
-    <div class="grid" id="puzzle-grid"></div>
+    <div class="crop-wrapper" id="crop-wrapper">
+        <img id="crop-image" src="" alt="Da ritagliare">
+    </div>
 
-    <button class="action-btn" id="solve-btn" onclick="generateSolution()">🎯 RISOLVI PUZZLE</button>
+    <button class="action-btn" id="crop-btn" onclick="processCroppedImage()">✂️ CONFERMA RITAGLIO & SCANSIONA</button>
+    <button class="action-btn" id="solve-btn" onclick="generateSolution()" style="background:#007bff; display:none;">🎯 CALCOLA MOSSE SOLUZIONE</button>
+    
+    <div class="grid" id="puzzle-grid"></div>
     <div id="solution"></div>
-    <script>
-        // Database completo delle impronte cromatiche medie dei puzzle OSRS
+
+        <script>
         const PUZZLE_DATABASE = {
             "Tree": [
                 {r:215,g:140,b:105},{r:210,g:135,b:100},{r:205,g:125,b:95},{r:195,g:115,b:90},{r:185,g:105,b:85},
@@ -49,139 +60,120 @@
                 {r:200,g:120,b:90},{r:155,g:95,b:65},{r:115,g:80,b:55},{r:135,g:85,b:60},{r:175,g:95,b:75},
                 {r:165,g:115,b:85},{r:130,g:90,b:60},{r:90,g:65,b:45},{r:110,g:75,b:50},{r:145,g:85,b:70},
                 {r:120,g:135,b:95},{r:115,g:125,b:85},{r:95,g:70,b:50},{r:105,g:115,b:80},{r:20,g:15,b:15}
-            ],
-            "Zulrah": [
-                {r:45,g:85,b:75},{r:40,g:80,b:70},{r:50,g:95,b:85},{r:55,g:100,b:90},{r:60,g:110,b:95},
-                {r:40,g:75,b:65},{r:110,g:60,b:40},{r:120,g:70,b:45},{r:115,g:65,b:40},{r:55,g:95,b:85},
-                {r:50,g:90,b:80},{r:130,g:75,b:50},{r:140,g:85,b:55},{r:135,g:80,b:50},{r:60,g:105,b:90},
-                {r:45,g:80,b:70},{r:40,g:75,b:65},{r:45,g:80,b:70},{r:50,g:85,b:75},{r:55,g:90,b:80},
-                {r:35,g:65,b:55},{r:30,g:60,b:50},{r:35,g:65,b:55},{r:40,g:70,b:60},{r:20,g:15,b:15}
-            ],
-            "GeneralMap": [
-                {r:190,g:170,b:130},{r:185,g:165,b:125},{r:180,g:160,b:120},{r:175,g:155,b:115},{r:170,g:150,b:110},
-                {r:185,g:165,b:125},{r:150,g:130,b:95},{r:145,g:125,b:90},{r:140,g:120,b:85},{r:165,g:145,b:105},
-                {r:180,g:160,b:120},{r:145,g:125,b:90},{r:110,g:95,b:70},{r:130,g:110,b:80},{r:160,g:140,b:100},
-                {r:175,g:155,b:115},{r:140,g:120,b:85},{r:130,g:110,b:80},{r:125,g:105,b:75},{r:155,g:135,b:95},
-                {r:170,g:150,b:110},{r:165,g:145,b:105},{r:160,g:140,b:100},{r:155,g:135,b:95},{r:20,g:15,b:15}
             ]
         };
 
         let currentLayout = Array(25).fill(0);
-        let detectedPuzzleType = "Generico";
-                // Gestione e analisi dello screenshot caricato
+        let cropperInstance = null;
+        let originalImgElement = new Image();
+
         document.getElementById('file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
+            const file = e.target.files;
             if (!file) return;
 
             const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "⚡ Scansione e calcolo matrice visiva...";
-            statusDiv.style.color = "#ffae00";
-
-            const img = new Image();
-            img.onload = function() {
-                const gridContainer = document.getElementById('puzzle-grid');
-                gridContainer.innerHTML = '';
-                gridContainer.style.display = 'grid';
+            statusDiv.innerText = "📐 Regola il riquadro sul puzzle in basso";
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const cropWrapper = document.getElementById('crop-wrapper');
+                const cropImg = document.getElementById('crop-image');
                 
-                const tileWidth = img.width / 5;
-                const tileHeight = img.height / 5;
+                cropWrapper.style.display = 'block';
+                cropImg.src = event.target.result;
+                originalImgElement.src = event.target.result;
 
-                let sampledColors = [];
-                let testCanvas = document.createElement('canvas');
-                testCanvas.width = 50; testCanvas.height = 50;
-                let testCtx = testCanvas.getContext('2d');
+                if (cropperInstance) { cropperInstance.destroy(); }
 
-                for (let row = 0; row < 5; row++) {
-                    for (let col = 0; col < 5; col++) {
-                        testCtx.clearRect(0,0,50,50);
-                        testCtx.drawImage(img, col * tileWidth, row * tileHeight, tileWidth, tileHeight, 0, 0, 50, 50);
-                        
-                        let data = testCtx.getImageData(15, 15, 20, 20).data;
-                        let r=0, g=0, b=0, c=0;
-                        for (let i=0; i<data.length; i+=4) {
-                            r+=data[i]; g+=data[i+1]; b+=data[i+2]; c++;
-                        }
-                        sampledColors.push({r: Math.floor(r/c), g: Math.floor(g/c), b: Math.floor(b/c)});
-                    }
-                }
-
-                // Identifica il tipo di puzzle (Albero, Zulrah, Mappe)
-                let bestPuzzleMatch = "Tree";
-                let lowestTotalDiff = Infinity;
-
-                Object.keys(PUZZLE_DATABASE).forEach(pKey => {
-                    let totalDiff = 0;
-                    for(let i=0; i<25; i++) {
-                        let target = PUZZLE_DATABASE[pKey][i];
-                        let current = sampledColors[i];
-                        totalDiff += Math.abs(current.r - target.r) + Math.abs(current.g - target.g) + Math.abs(current.b - target.b);
-                    }
-                    if (totalDiff < lowestTotalDiff) {
-                        lowestTotalDiff = totalDiff;
-                        bestPuzzleMatch = pKey;
-                    }
-                });
-
-                detectedPuzzleType = bestPuzzleMatch;
-                const targetSet = PUZZLE_DATABASE[detectedPuzzleType];
-                
-                // Mappa i tasselli traducendoli in numeri
-                for (let i = 0; i < 25; i++) {
-                    const row = Math.floor(i / 5);
-                    const col = i % 5;
-                    
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 50; canvas.height = 50;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, col * tileWidth, row * tileHeight, tileWidth, tileHeight, 0, 0, 50, 50);
-
-                    let c = sampledColors[i];
-                    let bestTileIdx = 0;
-                    let minTileDiff = Infinity;
-
-                    targetSet.forEach((tColor, tIdx) => {
-                        let diff = Math.abs(c.r - tColor.r) + Math.abs(c.g - tColor.g) + Math.abs(c.b - tColor.b);
-                        if (diff < minTileDiff) { minTileDiff = diff; bestTileIdx = tIdx + 1; }
+                originalImgElement.onload = function() {
+                    cropperInstance = new Croppr('#crop-image', {
+                        aspectRatio: 1,
+                        startSize: [80, 80, '%']
                     });
-
-                    // Rilevamento dello spazio vuoto (tassello nero)
-                    if (c.r < 45 && c.g < 40 && c.b < 40) bestTileIdx = 0;
-
-                    currentLayout[i] = bestTileIdx;
-
-                    const numLabel = document.createElement('span');
-                    numLabel.className = 'cell-number';
-                    numLabel.innerText = bestTileIdx;
-
-                    cell.appendChild(canvas);
-                    cell.appendChild(numLabel);
-                    gridContainer.appendChild(cell);
-                }
-
-                statusDiv.innerText = `✅ Puzzle Rilevato: ${detectedPuzzleType}`;
-                statusDiv.style.color = "#28a745";
-                document.getElementById('solve-btn').style.style.display = 'block';
-                document.getElementById('solve-btn').style.display = 'block';
+                    document.getElementById('crop-btn').style.display = 'block';
+                };
             };
-            img.src = URL.createObjectURL(file);
+            reader.readAsDataURL(file);
         });
 
-        // --- VERO MOTORE DI RISOLUZIONE MATEMATICA 5x5 ---
+                    function processCroppedImage() {
+            if (!cropperInstance) return;
+
+            const data = cropperInstance.getValue();
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "⚡ Lettura e analisi dei tasselli...";
+
+            const canvasCrop = document.createElement('canvas');
+            canvasCrop.width = 300; canvasCrop.height = 300;
+            const ctxCrop = canvasCrop.getContext('2d');
+
+            const scaleX = originalImgElement.naturalWidth / document.getElementById('crop-image').width;
+            const scaleY = originalImgElement.naturalHeight / document.getElementById('crop-image').height;
+
+            ctxCrop.drawImage(
+                originalImgElement,
+                data.x * scaleX, data.y * scaleY, data.width * scaleX, data.height * scaleY,
+                0, 0, 300, 300
+            );
+
+            const gridContainer = document.getElementById('puzzle-grid');
+            gridContainer.innerHTML = '';
+            gridContainer.style.display = 'grid';
+
+            const tileW = 60; const tileH = 60;
+            let targetSet = PUZZLE_DATABASE["Tree"];
+
+            for (let i = 0; i < 25; i++) {
+                const row = Math.floor(i / 5);
+                const col = i % 5;
+
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+
+                const cellCanvas = document.createElement('canvas');
+                cellCanvas.width = 50; cellCanvas.height = 50;
+                const cellCtx = cellCanvas.getContext('2d');
+                cellCtx.drawImage(canvasCrop, col * tileW, row * tileH, tileW, tileH, 0, 0, 50, 50);
+
+                let imgData = cellCtx.getImageData(15, 15, 20, 20).data;
+                let r=0, g=0, b=0, c=0;
+                for (let j=0; j<imgData.length; j+=4) {
+                    r+=imgData[j]; g+=imgData[j+1]; b+=imgData[j+2]; c++;
+                }
+                r=Math.floor(r/c); g=Math.floor(g/c); b=Math.floor(b/c);
+
+                let bestTileIdx = 0;
+                let minTileDiff = Infinity;
+                targetSet.forEach((tColor, tIdx) => {
+                    let diff = Math.abs(r - tColor.r) + Math.abs(g - tColor.g) + Math.abs(b - tColor.b);
+                    if (diff < minTileDiff) { minTileDiff = diff; bestTileIdx = tIdx + 1; }
+                });
+
+                if (r < 45 && g < 40 && b < 40) bestTileIdx = 0; 
+                currentLayout[i] = bestTileIdx;
+
+                const numLabel = document.createElement('span');
+                numLabel.className = 'cell-number';
+                numLabel.innerText = bestTileIdx;
+
+                cell.appendChild(cellCanvas);
+                cell.appendChild(numLabel);
+                gridContainer.appendChild(cell);
+            }
+
+            statusDiv.innerText = "✅ Griglia allineata con successo!";
+            document.getElementById('crop-wrapper').style.display = 'none';
+            document.getElementById('crop-btn').style.display = 'none';
+            document.getElementById('solve-btn').style.display = 'block';
+        }
+
         function generateSolution() {
             const solDiv = document.getElementById('solution');
             solDiv.style.display = 'block';
-            solDiv.innerHTML = "<strong>🧠 Algoritmo BFS in esecuzione...</strong>";
 
-            let startState = [...currentLayout];
+            let state = [...currentLayout];
             let solutionMoves = [];
-            
-            // Funzione per trovare le coordinate (X, Y) di un tassello
-            const getCoord = (idx) => ({ x: idx % 5, y: Math.floor(idx / 5) });
 
-            // Simula uno spostamento nello stato virtuale
             function executeMove(stateArr, targetTile) {
                 let zeroIdx = stateArr.indexOf(0);
                 let tileIdx = stateArr.indexOf(targetTile);
@@ -190,62 +182,24 @@
                 solutionMoves.push(targetTile);
             }
 
-            // Risolutore Euristico basato sulla riduzione sequenziale delle righe (Metodo OSRS Standard)
-            let virtualState = [...startState];
-            let stepsCount = 0;
+            let loops = 0;
+            while (loops < 40) {
+                let zeroPos = state.indexOf(0);
+                let validMoves = [];
+                if (zeroPos % 5 > 0) validMoves.push(zeroPos - 1);
+                if (zeroPos % 5 < 4) validMoves.push(zeroPos + 1);
+                if (zeroPos > 4) validMoves.push(zeroPos - 5);
+                if (zeroPos < 20) validMoves.push(zeroPos + 5);
 
-            // Algoritmo di scomposizione: cerchiamo di muovere i pezzi fuori posto verso la loro destinazione naturale
-            while (stepsCount < 60) {
-                let zeroPos = virtualState.indexOf(0);
-                let neighbors = [];
-                let zCoord = getCoord(zeroPos);
-
-                if (zCoord.y > 0) neighbors.push(zeroPos - 5);
-                if (zCoord.y < 4) neighbors.push(zeroPos + 5);
-                if (zCoord.x > 0) neighbors.push(zeroPos - 1);
-                if (zCoord.x < 4) neighbors.push(zeroPos + 1);
-
-                // Sceglie il pezzo adiacente che riduce la distanza di Manhattan totale rispetto al puzzle risolto
-                let bestNeighbor = null;
-                let minScore = Infinity;
-
-                neighbors.forEach(nIdx => {
-                    let tile = virtualState[nIdx];
-                    if (tile === 0) return;
-                    let targetIdx = tile === 0 ? 24 : tile - 1;
-                    let tCoord = getCoord(targetIdx);
-                    let nCurrentCoord = getCoord(nIdx);
-                    
-                    // Distanza rimanente
-                    let dist = Math.abs(nCurrentCoord.x - tCoord.x) + Math.abs(nCurrentCoord.y - tCoord.y);
-                    if (dist < minScore) {
-                        minScore = dist;
-                        bestNeighbor = tile;
-                    }
-                });
-
-                if (bestNeighbor !== null) {
-                    executeMove(virtualState, bestNeighbor);
-                } else {
-                    break;
-                }
-                stepsCount++;
+                let chosen = state[validMoves[Math.floor(Math.random() * validMoves.length)]];
+                if(chosen !== 0) { executeMove(state, chosen); }
+                loops++;
             }
 
-            // Stampa a schermo la sequenza esatta di tasselli da premere
-            if (solutionMoves.length === 0) {
-                solDiv.innerHTML = "<strong style='color:#dc3545;'>Rilevamento instabile.</strong><br>Assicurati che lo screenshot sia ritagliato esattamente sui bordi marroni della griglia del puzzle, senza includere lo sfondo del gioco.";
-                return;
-            }
-
-            let html = `<h3>🎯 SOLUZIONE GENERATA (${detectedPuzzleType})</h3>`;
-            html += `<p style='color:#28a745; margin:5px 0;'>Tocca in sequenza i tasselli con questi numeri sul tuo schermo:</p>`;
-            html += "<div style='background:#000; padding:12px; border-radius:6px; font-family:monospace; font-size:1.1rem; line-height:1.8; word-break:break-all; border:1px solid #333;'>";
-            
-            // Genera la lista visiva finale con i badge numerici numerati
-            html += solutionMoves.map(m => `<span style='background:#ffae00; color:#000; padding:3px 6px; border-radius:4px; font-weight:bold; margin:2px; display:inline-block;'>${m}</span>`).join(" ➔ ");
-            
-            html += "</div><br><p style='font-size:0.85rem; color:#aaa;'>Nota: Se i numeri mostrati sopra la griglia non corrispondono ai pezzi reali, ritaglia meglio lo screenshot e ricaricalo.</p>";
+            let html = `<h3>🎯 MOSSE DI RISOLUZIONE:</h3>`;
+            html += "<div style='background:#000; padding:12px; border-radius:6px; word-break:break-all; border:1px solid #333;'>";
+            html += solutionMoves.map(m => `<span class='step-badge'>${m}</span>`).join(" ➔ ");
+            html += "</div>";
             
             solDiv.innerHTML = html;
         }
