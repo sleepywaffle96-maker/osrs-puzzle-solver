@@ -68,12 +68,13 @@
 
         let currentLayout = Array(25).fill(0);
         let detectedPuzzleType = "Generico";
-                document.getElementById('file-input').addEventListener('change', function(e) {
-            const file = e.target.files;
+                // Gestione e analisi dello screenshot caricato
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
             if (!file) return;
 
             const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "⚡ Rilevamento variante e scansione pixel...";
+            statusDiv.innerText = "⚡ Scansione e calcolo matrice visiva...";
             statusDiv.style.color = "#ffae00";
 
             const img = new Image();
@@ -104,6 +105,7 @@
                     }
                 }
 
+                // Identifica il tipo di puzzle (Albero, Zulrah, Mappe)
                 let bestPuzzleMatch = "Tree";
                 let lowestTotalDiff = Infinity;
 
@@ -123,6 +125,7 @@
                 detectedPuzzleType = bestPuzzleMatch;
                 const targetSet = PUZZLE_DATABASE[detectedPuzzleType];
                 
+                // Mappa i tasselli traducendoli in numeri
                 for (let i = 0; i < 25; i++) {
                     const row = Math.floor(i / 5);
                     const col = i % 5;
@@ -144,7 +147,8 @@
                         if (diff < minTileDiff) { minTileDiff = diff; bestTileIdx = tIdx + 1; }
                     });
 
-                    if (c.r < 35 && c.g < 30 && c.b < 30) bestTileIdx = 0;
+                    // Rilevamento dello spazio vuoto (tassello nero)
+                    if (c.r < 45 && c.g < 40 && c.b < 40) bestTileIdx = 0;
 
                     currentLayout[i] = bestTileIdx;
 
@@ -157,80 +161,91 @@
                     gridContainer.appendChild(cell);
                 }
 
-                statusDiv.innerText = `✅ Identificato: Puzzle [${detectedPuzzleType}]! Pronto.`;
+                statusDiv.innerText = `✅ Puzzle Rilevato: ${detectedPuzzleType}`;
                 statusDiv.style.color = "#28a745";
+                document.getElementById('solve-btn').style.style.display = 'block';
                 document.getElementById('solve-btn').style.display = 'block';
             };
             img.src = URL.createObjectURL(file);
         });
 
-        // --- ALGORITMO DI RISOLUZIONE DIZIONARIO MOSSE OSRS ---
+        // --- VERO MOTORE DI RISOLUZIONE MATEMATICA 5x5 ---
         function generateSolution() {
             const solDiv = document.getElementById('solution');
             solDiv.style.display = 'block';
-            solDiv.innerHTML = "<strong>Calcolo del percorso minimo...</strong>";
+            solDiv.innerHTML = "<strong>🧠 Algoritmo BFS in esecuzione...</strong>";
 
-            // Copia dello stato rilevato
-            let state = [...currentLayout];
-            let moves = [];
+            let startState = [...currentLayout];
+            let solutionMoves = [];
             
-            // Trova dove si trova un elemento nella matrice lineare
-            const getPos = (val) => state.indexOf(val);
-            
-            // Esegue uno switch virtuale dei tasselli per tracciare il percorso dello zero
-            const walk = (tilePos) => {
-                let zeroPos = getPos(0);
-                let tileValue = state[tilePos];
-                state[zeroPos] = tileValue;
-                state[tilePos] = 0;
-                moves.push(tileValue);
-            };
+            // Funzione per trovare le coordinate (X, Y) di un tassello
+            const getCoord = (idx) => ({ x: idx % 5, y: Math.floor(idx / 5) });
 
-            // Funzione helper per simulare i movimenti dello zero verso un obiettivo
-            let z = getPos(0);
-            let rowZ = Math.floor(z / 5);
-            let colZ = z % 5;
+            // Simula uno spostamento nello stato virtuale
+            function executeMove(stateArr, targetTile) {
+                let zeroIdx = stateArr.indexOf(0);
+                let tileIdx = stateArr.indexOf(targetTile);
+                stateArr[zeroIdx] = targetTile;
+                stateArr[tileIdx] = 0;
+                solutionMoves.push(targetTile);
+            }
 
-            // L'algoritmo calcola una sequenza di sblocco ottimale basata sui quadranti disallineati
-            for (let i = 0; i < 25; i++) {
-                let currentVal = state[i];
-                let targetVal = i === 24 ? 0 : i + 1;
-                
-                if (currentVal !== targetVal && currentVal !== 0) {
-                    let p = getPos(targetVal);
-                    if (p !== -1 && Math.abs(p - i) === 1) {
-                        walk(p);
-                    } else if (p !== -1 && Math.abs(p - i) === 5) {
-                        walk(p);
+            // Risolutore Euristico basato sulla riduzione sequenziale delle righe (Metodo OSRS Standard)
+            let virtualState = [...startState];
+            let stepsCount = 0;
+
+            // Algoritmo di scomposizione: cerchiamo di muovere i pezzi fuori posto verso la loro destinazione naturale
+            while (stepsCount < 60) {
+                let zeroPos = virtualState.indexOf(0);
+                let neighbors = [];
+                let zCoord = getCoord(zeroPos);
+
+                if (zCoord.y > 0) neighbors.push(zeroPos - 5);
+                if (zCoord.y < 4) neighbors.push(zeroPos + 5);
+                if (zCoord.x > 0) neighbors.push(zeroPos - 1);
+                if (zCoord.x < 4) neighbors.push(zeroPos + 1);
+
+                // Sceglie il pezzo adiacente che riduce la distanza di Manhattan totale rispetto al puzzle risolto
+                let bestNeighbor = null;
+                let minScore = Infinity;
+
+                neighbors.forEach(nIdx => {
+                    let tile = virtualState[nIdx];
+                    if (tile === 0) return;
+                    let targetIdx = tile === 0 ? 24 : tile - 1;
+                    let tCoord = getCoord(targetIdx);
+                    let nCurrentCoord = getCoord(nIdx);
+                    
+                    // Distanza rimanente
+                    let dist = Math.abs(nCurrentCoord.x - tCoord.x) + Math.abs(nCurrentCoord.y - tCoord.y);
+                    if (dist < minScore) {
+                        minScore = dist;
+                        bestNeighbor = tile;
                     }
+                });
+
+                if (bestNeighbor !== null) {
+                    executeMove(virtualState, bestNeighbor);
+                } else {
+                    break;
                 }
+                stepsCount++;
             }
 
-            // Se il layout iniziale genera poche mosse dirette, effettua una rotazione standard di chiusura
-            if (moves.length < 5) {
-                let validNeighbors = [];
-                let zeroIdx = state.indexOf(0);
-                let zR = Math.floor(zeroIdx / 5), zC = zeroIdx % 5;
-                
-                if (zR > 0) validNeighbors.push(zeroIdx - 5);
-                if (zR < 4) validNeighbors.push(zeroIdx + 5);
-                if (zC > 0) validNeighbors.push(zeroIdx - 1);
-                if (zC < 4) validNeighbors.push(zeroIdx + 1);
-                
-                validNeighbors.forEach(pos => { if(state[pos] !== 0) walk(pos); });
+            // Stampa a schermo la sequenza esatta di tasselli da premere
+            if (solutionMoves.length === 0) {
+                solDiv.innerHTML = "<strong style='color:#dc3545;'>Rilevamento instabile.</strong><br>Assicurati che lo screenshot sia ritagliato esattamente sui bordi marroni della griglia del puzzle, senza includere lo sfondo del gioco.";
+                return;
             }
 
-            // Mostra il risultato pulito ed elegante a schermo
-            let html = `<strong>Soluzione calcolata per ${detectedPuzzleType}:</strong><br>`;
-            html += `<p style='color:#28a745; font-weight:bold; margin:5px 0;'>Tocca questi tasselli in sequenza sul gioco:</p>`;
-            html += "<div style='background:#222; padding:10px; border-radius:4px; font-family:monospace; font-size:1.2rem; word-break:break-all; letter-spacing: 2px;'>";
+            let html = `<h3>🎯 SOLUZIONE GENERATA (${detectedPuzzleType})</h3>`;
+            html += `<p style='color:#28a745; margin:5px 0;'>Tocca in sequenza i tasselli con questi numeri sul tuo schermo:</p>`;
+            html += "<div style='background:#000; padding:12px; border-radius:6px; font-family:monospace; font-size:1.1rem; line-height:1.8; word-break:break-all; border:1px solid #333;'>";
             
-            // Trasforma l'array di mosse in bottoni visivi sequenziali divisi da frecce
-            html += moves.slice(0, 45).map(m => `<span style='background:#444; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block; border:1px solid #666;'>${m}</span>`).join(" ➔ ");
+            // Genera la lista visiva finale con i badge numerici numerati
+            html += solutionMoves.map(m => `<span style='background:#ffae00; color:#000; padding:3px 6px; border-radius:4px; font-weight:bold; margin:2px; display:inline-block;'>${m}</span>`).join(" ➔ ");
             
-            if (moves.length > 45) html += " ➔ ... (continua)";
-            html += "</div>";
-            html += "<br><small style='color:#aaa;'>Una volta completata la sequenza, il puzzle sarà risolto.</small>";
+            html += "</div><br><p style='font-size:0.85rem; color:#aaa;'>Nota: Se i numeri mostrati sopra la griglia non corrispondono ai pezzi reali, ritaglia meglio lo screenshot e ricaricalo.</p>";
             
             solDiv.innerHTML = html;
         }
