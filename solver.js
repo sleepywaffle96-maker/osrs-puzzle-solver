@@ -25,7 +25,6 @@ const PUZZLE_DATABASE = {
 };
 
 let currentLayout = Array(25).fill(0);
-let originalImg = new Image();
 let arrowMovesString = ""; 
 let detectedType = "Unknown";
 
@@ -33,57 +32,51 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    document.getElementById('status').innerText = "⚡ Scanning image & detecting puzzle box...";
+    document.getElementById('status').innerText = "⚡ Loading & Downscaling image instantly...";
+    
+    const img = new Image();
     const reader = new FileReader();
+    
     reader.onload = function(event) {
-        originalImg.src = event.target.result;
-        originalImg.onload = autoDetectAndProcess;
+        img.src = event.target.result;
+        img.onload = function() {
+            // DOWN-SAMPLING IMMEDIATO: Forza il browser a gestire solo un'immagine di 400x400 max
+            const fastCanvas = document.createElement('canvas');
+            fastCanvas.width = 400;
+            fastCanvas.height = 400;
+            const fastCtx = fastCanvas.getContext('2d');
+            
+            // Disegna direttamente l'immagine rimpicciolita eliminando i pesanti megapixel originali
+            fastCtx.drawImage(img, 0, 0, 400, 400);
+            
+            // Esegue l'analisi direttamente sulla matrice ridotta ultra-leggera
+            processLightweightImage(fastCanvas, fastCtx);
+        };
     };
     reader.readAsDataURL(file);
 });
 
-function autoDetectAndProcess() {
+function processLightweightImage(canvas, ctx) {
     const statusDiv = document.getElementById('status');
-    const srcW = originalImg.naturalWidth, srcH = originalImg.naturalHeight;
     
-    const scanCanvas = document.createElement('canvas');
-    scanCanvas.width = 400; scanCanvas.height = 400;
-    const scanCtx = scanCanvas.getContext('2d');
-
-    let boxX = srcW * 0.15, boxY = srcH * 0.20, boxW = srcW * 0.70, boxH = srcH * 0.60;
-
-    const testCanvas = document.createElement('canvas');
-    testCanvas.width = 100; testCanvas.height = 100;
-    const testCtx = testCanvas.getContext('2d');
-    testCtx.drawImage(originalImg, 0, 0, 100, 100);
-    const rawData = testCtx.getImageData(0, 0, 100, 100).data;
-
-    let firstX = -1, lastX = -1;
-    for(let x=10; x<90; x++) {
-        let idx = (50 * 100 + x) * 4;
-        if(rawData[idx] > 50 && rawData[idx] < 110 && rawData[idx+1] > 40 && rawData[idx+1] < 90) {
-            if(firstX === -1) firstX = x;
-            lastX = x;
-        }
-    }
-    if(firstX !== -1 && (lastX - firstX) > 20) {
-        boxX = (firstX / 100) * srcW; boxW = ((lastX - firstX) / 100) * srcW;
-        boxY = (srcH / 2) - (boxW / 2); boxH = boxW;
-    }
-
-    scanCtx.drawImage(originalImg, boxX, boxY, boxW, boxH, 0, 0, 400, 400);
-    
+    // Calcola il colore medio globale della matrice centrale (pixel da 50 a 350)
     let totalR = 0, totalG = 0, totalB = 0, pixelCount = 0;
-    const boxData = scanCtx.getImageData(50, 50, 300, 300).data;
-    for(let i=0; i<boxData.length; i+=16) { 
-        totalR += boxData[i]; totalG += boxData[i+1]; totalB += boxData[i+2];
+    const boxData = ctx.getImageData(50, 50, 300, 300).data;
+    
+    for(let i = 0; i < boxData.length; i += 64) { // Incremento a 64 passi per renderlo istantaneo su mobile
+        totalR += boxData[i];
+        totalG += boxData[i+1];
+        totalB += boxData[i+2];
         pixelCount++;
     }
+    
     let avgR = Math.floor(totalR / pixelCount);
     let avgG = Math.floor(totalG / pixelCount);
     let avgB = Math.floor(totalB / pixelCount);
 
-    let bestMatch = "Tree", lowestDiff = Infinity;
+    // Corrispondenza rapida del database dei 19 puzzle
+    let bestMatch = "Tree";
+    let lowestDiff = Infinity;
     Object.keys(PUZZLE_DATABASE).forEach(key => {
         let currentTarget = PUZZLE_DATABASE[key];
         let diff = Math.abs(avgR - currentTarget.r) + Math.abs(avgG - currentTarget.g) + Math.abs(avgB - currentTarget.b);
@@ -91,27 +84,41 @@ function autoDetectAndProcess() {
     });
 
     detectedType = bestMatch;
+    
+    // Generazione della sotto-griglia visiva 5x5 a schermo
     const gridContainer = document.getElementById('puzzle-grid');
-    gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
+    gridContainer.innerHTML = ''; 
+    gridContainer.style.display = 'grid';
 
     for (let i = 0; i < 25; i++) {
         const row = Math.floor(i / 5), col = i % 5;
-        const cell = document.createElement('div'); cell.className = 'cell';
-        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
+        const cell = document.createElement('div'); 
+        cell.className = 'cell';
+        
+        const cellCanvas = document.createElement('canvas'); 
+        cellCanvas.width = 50; 
+        cellCanvas.height = 50;
         const cellCtx = cellCanvas.getContext('2d');
-        cellCtx.drawImage(scanCanvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
+        
+        // Ritaglia i tasselli direttamente dalla canvas miniaturizzata pre-caricata
+        cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
         let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
-        let cellR=0, cellG=0, cellB=0, cellC=0;
-        for (let j=0; j<imgData.length; j+=4) { cellR+=imgData[j]; cellG+=imgData[j+1]; cellB+=imgData[j+2]; cellC++; }
-        cellR=Math.floor(cellR/cellC); cellG=Math.floor(cellG/cellC); cellB=Math.floor(cellB/cellC);
+        let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
+        for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
+        cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let simulatedIndex = i + 1;
         if (cellR < 45 && cellG < 40 && cellB < 40) simulatedIndex = 0; 
         currentLayout[i] = simulatedIndex;
 
-        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = simulatedIndex;
-        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
+        const numLabel = document.createElement('span'); 
+        numLabel.className = 'cell-number'; 
+        numLabel.innerText = simulatedIndex;
+        
+        cell.appendChild(cellCanvas); 
+        cell.appendChild(numLabel); 
+        gridContainer.appendChild(cell);
     }
 
     statusDiv.innerText = `✅ Detected Puzzle: [${detectedType}]`;
@@ -191,6 +198,6 @@ async function toggleOverlay() {
         }
     } catch (error) {
         console.error("Picture-in-Picture failed: ", error);
-        alert("Picture-in-Picture window initialization blocked or unsupported on this device client.");
+        alert("Picture-in-Picture overlay unsupported or blocked on this specific mobile browser browser.");
     }
 }
