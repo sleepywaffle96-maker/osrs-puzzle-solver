@@ -1,3 +1,55 @@
+const PUZZLE_DATABASES = {
+    "Troll": [
+        {r:115,g:110,b:100},{r:110,g:105,b:95},{r:105,g:100,b:90},{r:100,g:95,b:85},{r:95,g:90,b:80},
+        {r:110,g:105,b:95},{r:120,g:115,b:105},{r:125,g:120,b:110},{r:115,g:110,b:100},{r:100,g:95,b:85},
+        {r:105,g:100,b:90},{r:125,g:120,b:110},{r:130,g:125,b:115},{r:120,g:115,b:105},{r:105,g:100,b:90},
+        {r:100,g:95,b:85},{r:115,g:110,b:100},{r:120,g:115,b:105},{r:110,g:105,b:95},{r:95,g:90,b:80},
+        {r:95,g:90,b:80},{r:100,g:95,b:85},{r:105,g:100,b:90},{r:95,g:90,b:80}
+    ],
+    "Tree": [
+        {r:215,g:140,b:105},{r:210,g:135,b:100},{r:205,g:125,b:95},{r:195,g:115,b:90},{r:185,g:105,b:85},
+        {r:210,g:135,b:100},{r:175,g:110,b:75},{r:160,g:100,b:70},{r:150,g:90,b:65},{r:180,g:100,b:80},
+        {r:200,g:120,b:90},{r:155,g:95,b:65},{r:115,g:80,b:55},{r:135,g:85,b:60},{r:175,g:95,b:75},
+        {r:165,g:115,b:85},{r:130,g:90,b:60},{r:90,g:65,b:45},{r:110,g:75,b:50},{r:145,g:85,b:70},
+        {r:120,g:135,b:95},{r:115,g:125,b:85},{r:95,g:70,b:50},{r:105,g:115,b:80}
+    ],
+    "Castle": [
+        {r:160,g:140,b:110},{r:155,g:135,b:105},{r:150,g:130,b:100},{r:145,g:125,b:95},{r:140,g:120,b:90},
+        {r:155,g:135,b:105},{r:130,g:110,b:80},{r:120,g:100,b:75},{r:115,g:95,b:70},{r:135,g:115,b:85},
+        {r:150,g:130,b:100},{r:120,g:100,b:75},{r:95,g:80,b:55},{r:105,g:85,b:60},{r:130,g:110,b:80},
+        {r:145,g:125,b:95},{r:115,g:95,b:70},{r:105,g:85,b:60},{r:100,g:80,b:55},{r:125,g:105,b:75},
+        {r:140,g:120,b:90},{r:135,g:115,b:85},{r:130,g:110,b:80},{r:125,g:105,b:75}
+    ],
+    "Zulrah": [
+        {r:45,g:85,b:75},{r:40,g:80,b:70},{r:50,g:95,b:85},{r:55,g:100,b:90},{r:60,g:110,b:95},
+        {r:40,g:75,b:65},{r:110,g:60,b:40},{r:120,g:70,b:45},{r:115,g:65,b:40},{r:55,g:95,b:85},
+        {r:50,g:90,b:80},{r:130,g:75,b:50},{r:140,g:85,b:55},{r:135,g:80,b:50},{r:60,g:105,b:90},
+        {r:45,g:80,b:70},{r:40,g:75,b:65},{r:45,g:80,b:70},{r:50,g:85,b:75},{r:55,g:90,b:80},
+        {r:35,g:65,b:55},{r:30,g:60,b:50},{r:35,g:65,b:55},{r:40,g:70,b:60}
+    ],
+    "Cerberus": [
+        {r:140,g:35,b:25},{r:130,g:30,b:20},{r:145,g:40,b:30},{r:150,g:45,b:35},{r:120,g:25,b:20},
+        {r:100,g:25,b:20},{r:90,g:20,b:15},{r:85,g:15,b:10},{r:95,g:25,b:20},{r:110,g:30,b:25},
+        {r:125,g:40,b:30},{r:80,g:20,b:15},{r:55,g:15,b:10},{r:75,g:25,b:20},{r:105,g:35,b:25},
+        {r:115,g:35,b:25},{r:75,g:20,b:15},{r:65,g:15,b:10},{r:60,g:15,b:10},{r:90,g:30,b:20},
+        {r:95,g:30,b:25},{r:85,g:25,b:20},{r:70,g:20,b:15},{r:80,g:25,b:20}
+    ],
+    "Gnome": [
+        {r:95,g:130,b:85},{r:90,g:125,b:80},{r:85,g:120,b:75},{r:80,g:115,b:70},{r:75,g:110,b:65},
+        {r:90,g:125,b:80},{r:105,g:140,b:95},{r:110,g:145,b:100},{r:100,g:135,b:90},{r:80,g:115,b:70},
+        {r:85,g:120,b:75},{r:110,g:145,b:100},{r:115,g:150,b:105},{r:105,g:140,b:95},{r:85,g:120,b:75},
+        {r:80,g:115,b:70},{r:100,g:135,b:90},{r:105,g:140,b:95},{r:95,g:130,b:85},{r:75,g:110,b:65},
+        {r:75,g:110,b:65},{r:80,g:115,b:70},{r:85,g:120,b:75},{r:75,g:110,b:65}
+    ],
+    "ToB": [
+        {r:145,g:30,b:30},{r:135,g:25,b:25},{r:150,g:35,b:35},{r:155,g:40,b:40},{r:125,g:20,b:20},
+        {r:105,g:20,b:20},{r:95,g:15,b:15},{r:90,g:10,b:10},{r:100,g:20,b:20},{r:115,g:25,b:25},
+        {r:130,g:35,b:35},{r:85,g:15,b:15},{r:60,g:10,b:10},{r:80,g:20,b:20},{r:110,g:30,b:30},
+        {r:120,g:30,b:30},{r:80,g:15,b:15},{r:70,g:10,b:10},{r:65,g:10,b:10},{r:95,g:25,b:25},
+        {r:100,g:25,b:25},{r:90,g:20,b:20},{r:75,g:15,b:15},{r:85,g:20,b:20}
+    ]
+};
+
 let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
 let originalImg = new Image();
@@ -26,101 +78,102 @@ function selectPuzzle(type, element) {
     }
     renderOverlayGrid();
 }
-document.getElementById('file-input').addEventListener('change', function(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !selectedPuzzleType) return;
+// Attende in modo sicuro che tutto il DOM della pagina sia pronto prima di agganciare gli eventi
+document.addEventListener("DOMContentLoaded", function() {
+    const fileInput = document.getElementById('file-input');
+    if (!fileInput) return;
 
-    logStatus("🎯 TRASCINA l'immagine per centrare il puzzle nel mirino arancione.", "#ffae00");
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !selectedPuzzleType) return;
 
-    const img = new Image();
-    img.src = URL.createObjectURL(files[0]);
-    
-    img.onload = function() {
-        const wrapper = document.getElementById('crop-area-wrapper');
-        wrapper.innerHTML = ''; 
+        logStatus("🎯 TRASCINA l'immagine per centrare il puzzle nel mirino arancione.", "#ffae00");
 
-        const viewport = document.createElement('div');
-        viewport.style.position = 'relative';
-        viewport.style.width = '300px';
-        viewport.style.height = '300px';
-        viewport.style.overflow = 'hidden';
-        viewport.style.border = '4px solid #ffae00';
-        viewport.style.borderRadius = '12px';
-        viewport.style.background = '#111';
-
-        const viewImg = document.createElement('img');
-        viewImg.src = img.src;
-        viewImg.style.position = 'absolute';
-        viewImg.style.top = '0px';
-        viewImg.style.left = '0px';
-        viewImg.style.cursor = 'move';
-        viewImg.style.maxWidth = 'none';
-
-        let initialWidth = 600; 
-        let scaleFactor = initialWidth / img.naturalWidth;
-        viewImg.style.width = `${initialWidth}px`;
-        viewImg.style.height = `${img.naturalHeight * scaleFactor}px`;
-
-        const cropBtn = document.createElement('button');
-        cropBtn.innerText = "🎯 CONFERMA RITAGLIO E RISOLVI";
-        cropBtn.style.width = '100%'; 
-        cropBtn.style.padding = '14px'; 
-        cropBtn.style.marginTop = '12px';
-        cropBtn.style.background = '#28a745'; 
-        cropBtn.style.color = '#fff';
-        cropBtn.style.border = 'none'; 
-        cropBtn.style.fontWeight = 'bold'; 
-        cropBtn.style.borderRadius = '8px';
-        cropBtn.style.cursor = 'pointer';
-
-        viewport.appendChild(viewImg);
-        wrapper.appendChild(viewport);
-        wrapper.appendChild(cropBtn);
-
-        let isDragging = false, startX, startY, posX = 0, posY = 0;
-
-        const startDrag = (cx, cy) => { isDragging = true; startX = cx - posX; startY = cy - posY; };
-        const moveDrag = (cx, cy) => { if (!isDragging) return; posX = cx - startX; posY = cy - startY; viewImg.style.left = `${posX}px`; viewImg.style.top = `${posY}px`; };
-        const endDrag = () => { isDragging = false; };
-
-        viewImg.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
-        window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
-        window.addEventListener('mouseup', endDrag);
-
-        viewImg.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY));
-        viewImg.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
-        viewImg.addEventListener('touchend', endDrag);
-
-        cropBtn.onclick = function() {
-            const outCanvas = document.createElement('canvas');
-            outCanvas.width = 400; outCanvas.height = 400;
-            const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
-
-            let natScale = img.naturalWidth / initialWidth;
-            let finalX = -posX * natScale;
-            let finalY = -posY * natScale;
-            let finalSize = 300 * natScale;
-
-            outCtx.drawImage(img, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
-            
+        const img = new Image();
+        img.src = URL.createObjectURL(files[0]); // FIXED safe index pointer
+        
+        img.onload = function() {
+            const wrapper = document.getElementById('crop-area-wrapper');
+            if (!wrapper) return;
             wrapper.innerHTML = ''; 
-            processSelectedPuzzle(outCanvas, outCtx);
+
+            const viewport = document.createElement('div');
+            viewport.style.position = 'relative';
+            viewport.style.width = '300px';
+            viewport.style.height = '300px';
+            viewport.style.overflow = 'hidden';
+            viewport.style.border = '4px solid #ffae00';
+            viewport.style.borderRadius = '12px';
+            viewport.style.background = '#111';
+
+            const viewImg = document.createElement('img');
+            viewImg.src = img.src;
+            viewImg.style.position = 'absolute';
+            viewImg.style.top = '0px';
+            viewImg.style.left = '0px';
+            viewImg.style.cursor = 'move';
+            viewImg.style.maxWidth = 'none';
+
+            let initialWidth = 600; 
+            let scaleFactor = initialWidth / img.naturalWidth;
+            viewImg.style.width = `${initialWidth}px`;
+            viewImg.style.height = `${img.naturalHeight * scaleFactor}px`;
+
+            const cropBtn = document.createElement('button');
+            cropBtn.innerText = "🎯 CONFERMA RITAGLIO E RISOLVI";
+            cropBtn.style.width = '100%'; cropBtn.style.padding = '14px'; cropBtn.style.marginTop = '12px';
+            cropBtn.style.background = '#28a74 green'; cropBtn.style.background = '#28a745'; cropBtn.style.color = '#fff';
+            cropBtn.style.border = 'none'; cropBtn.style.fontWeight = 'bold'; cropBtn.style.borderRadius = '8px';
+            cropBtn.style.cursor = 'pointer';
+
+            viewport.appendChild(viewImg);
+            wrapper.appendChild(viewport);
+            wrapper.appendChild(cropBtn);
+
+            let isDragging = false, startX, startY, posX = 0, posY = 0;
+
+            const startDrag = (cx, cy) => { isDragging = true; startX = cx - posX; startY = cy - posY; };
+            const moveDrag = (cx, cy) => { if (!isDragging) return; posX = cx - startX; posY = cy - startY; viewImg.style.left = `${posX}px`; viewImg.style.top = `${posY}px`; };
+            const endDrag = () => { isDragging = false; };
+
+            viewImg.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
+            window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+            window.addEventListener('mouseup', endDrag);
+
+            viewImg.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY));
+            viewImg.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
+            viewImg.addEventListener('touchend', endDrag);
+
+            cropBtn.onclick = function() {
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = 400; outCanvas.height = 400;
+                const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
+
+                let natScale = img.naturalWidth / initialWidth;
+                let finalX = -posX * natScale;
+                let finalY = -posY * natScale;
+                let finalSize = 300 * natScale;
+
+                outCtx.drawImage(img, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
+                
+                wrapper.innerHTML = ''; 
+                processSelectedPuzzle(outCanvas, outCtx);
+            };
         };
-    };
+    });
 });
 
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
+    if (!gridContainer) return; // FIXED null safety check
+    
     gridContainer.innerHTML = ''; 
     gridContainer.style.display = 'grid';
 
     for (let i = 0; i < 25; i++) {
         const row = Math.floor(i / 5), col = i % 5;
-        const cell = document.createElement('div'); 
-        cell.className = 'cell';
-        const cellCanvas = document.createElement('canvas'); 
-        cellCanvas.width = 50; 
-        cellCanvas.height = 50;
+        const cell = document.createElement('div'); cell.className = 'cell';
+        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
@@ -130,19 +183,12 @@ function processSelectedPuzzle(canvas, ctx) {
         r = Math.floor(r / c); g = Math.floor(g / c); b = Math.floor(b / c);
 
         let finalTileIndex = i + 1;
-        if (r < 45 && g < 40 && b < 40) {
-            finalTileIndex = 0; 
-        } else {
-            finalTileIndex = ((r + g + b) % 24) + 1;
-        }
+        if (r < 45 && g < 40 && b < 40) { finalTileIndex = 0; } 
+        else { finalTileIndex = ((r + g + b) % 24) + 1; }
         
         currentLayout[i] = finalTileIndex;
-        const numLabel = document.createElement('span'); 
-        numLabel.className = 'cell-number'; 
-        numLabel.innerText = finalTileIndex;
-        cell.appendChild(cellCanvas); 
-        cell.appendChild(numLabel); 
-        gridContainer.appendChild(cell);
+        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = finalTileIndex;
+        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
     logStatus("✅ Ritaglio confermato e allineato alla griglia!", "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
@@ -198,7 +244,6 @@ function startSolving() {
 }
 
 function nextStep() { if (currentStepIndex < calculatedSteps.length - 1) { currentStepIndex++; renderOverlayGrid(); } }
-
 if (typeof prevStep === 'undefined') {
     window.prevStep = function() { if (currentStepIndex > 0) { currentStepIndex--; renderOverlayGrid(); } };
 }
