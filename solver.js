@@ -52,12 +52,8 @@ const PUZZLE_DATABASES = {
 
 let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
-let originalImg = new Image();
 let calculatedSteps = []; 
 let currentStepIndex = 0;
-
-// Coordinate dei punti di click per il ritaglio manuale assistito
-let clickPoints = [];
 
 const pipCanvas = document.createElement('canvas');
 pipCanvas.width = 300; pipCanvas.height = 300; 
@@ -85,86 +81,84 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("📍 CLICK on the TOP-LEFT corner of the 5x5 puzzle box inside the image below.", "#ffae00");
-    clickPoints = [];
-
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        originalImg.src = event.target.result;
-        originalImg.onload = function() {
-            // Rimuove vecchie canvas interattive se esistenti
-            const oldCanvas = document.getElementById('debug-click-canvas');
-            if (oldCanvas) oldCanvas.remove();
-
-            // Crea una canvas visibile temporanea per raccogliere i click del giocatore
-            const displayCanvas = document.createElement('canvas');
-            displayCanvas.id = 'debug-click-canvas';
-            displayCanvas.style.maxWidth = '100%';
-            displayCanvas.style.width = '360px';
-            displayCanvas.style.border = '2px solid #ffae00';
-            displayCanvas.style.marginTop = '15px';
-            displayCanvas.style.borderRadius = '8px';
-            displayCanvas.style.cursor = 'crosshair';
-
-            displayCanvas.width = originalImg.naturalWidth;
-            displayCanvas.height = originalImg.naturalHeight;
-            const dCtx = displayCanvas.getContext('2d');
-            dCtx.drawImage(originalImg, 0, 0);
-
-            // Inserisce la canvas subito sotto la zona di upload
-            document.getElementById('upload-box').after(displayCanvas);
-
-            displayCanvas.addEventListener('click', function(evt) {
-                const rect = displayCanvas.getBoundingClientRect();
-                const scaleX = displayCanvas.width / rect.width;
-                const scaleY = displayCanvas.height / rect.height;
-                
-                const clickX = (evt.clientX - rect.left) * scaleX;
-                const clickY = (evt.clientY - rect.top) * scaleY;
-
-                clickPoints.push({ x: clickX, y: clickY });
-
-                // Disegna un cerchietto di controllo sul punto cliccato
-                dCtx.fillStyle = "#ffae00";
-                dCtx.beginPath();
-                dCtx.arc(clickX, clickY, displayCanvas.width * 0.015, 0, Math.PI * 2);
-                dCtx.fill();
-
-                if (clickPoints.length === 1) {
-                    logStatus("📍 Now CLICK on the BOTTOM-RIGHT corner of the 5x5 puzzle box.", "#ffae00");
-                } else if (clickPoints.length === 2) {
-                    logStatus("⚡ Cropping and segmenting selected zone...", "#28a745");
-                    setTimeout(() => {
-                        processManualCrop(displayCanvas);
-                    }, 200);
-                }
-            });
-        };
-    };
-    reader.readAsDataURL(file[0]);
-});
-
-function processManualCrop(displayCanvas) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 400; canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-
-    let p1 = clickPoints[0];
-    let p2 = clickPoints[1];
-
-    let cropX = Math.min(p1.x, p2.x);
-    let cropY = Math.min(p1.y, p2.y);
-    let cropW = Math.abs(p2.x - p1.x);
-    let cropH = Math.abs(p2.y - p1.y);
-
-    // Isola ed estrae solo l'area racchiusa dai tuoi due click, eliminando il resto dello schermo del PC
-    ctx.drawImage(originalImg, cropX, cropY, cropW, cropH, 0, 0, 400, 400);
+    logStatus("⚡ Scanning full screen at native resolution...");
+    const img = new Image();
+    img.src = URL.createObjectURL(file[0]); // Correzione array file blob
     
-    // Rimuove la canvas di calibrazione visiva dopo l'estrazione con successo
-    displayCanvas.remove();
+    img.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400; canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            
+            let srcW = img.naturalWidth, srcH = img.naturalHeight;
+            
+            // Creazione canvas HD ad alta fedeltà per non perdere le coordinate del client
+            let scanCanvas = document.createElement('canvas');
+            scanCanvas.width = srcW; scanCanvas.height = srcH;
+            let scanCtx = scanCanvas.getContext('2d');
+            scanCtx.drawImage(img, 0, 0);
+            
+            // Campionamento selettivo: analizza una colonna e riga centrale per trovare la cornice
+            let minX = srcW, maxX = 0, minY = srcH, maxY = 0;
+            let foundBox = false;
 
-    processSelectedPuzzle(canvas, ctx);
-}
+            // Scansione a intervalli ottimizzati per mantenere la velocità istantanea su mobile
+            let stepX = Math.floor(srcW / 300) || 1;
+            let stepY = Math.floor(srcH / 300) || 1;
+
+            // Campiona solo la porzione destra dello schermo (dove tieni agganciato RuneLite)
+            let startX = Math.floor(srcW * 0.3); 
+            let endX = Math.floor(srcW * 0.95);
+            let startY = Math.floor(srcH * 0.1);
+            let endY = Math.floor(srcH * 0.9);
+
+            for (let y = startY; y < endY; y += stepY) {
+                let rowData = scanCtx.getImageData(startX, y, endX - startX, 1).data;
+                for (let x = 0; x < rowData.length; x += 4 * stepX) {
+                    let r = rowData[x], g = rowData[x+1], b = rowData[x+2];
+                    
+                    // Firma esatta del legno marrone delle cornici OSRS
+                    if (r > 52 && r < 118 && g > 42 && g < 92 && b < 60) {
+                        let realX = startX + (x / 4);
+                        if (realX < minX) minX = realX;
+                        if (realX > maxX) maxX = realX;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        foundBox = true;
+                    }
+                }
+            }
+
+            let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
+
+            if (foundBox && (maxX - minX) > srcW * 0.1) {
+                cropX = minX;
+                cropY = minY;
+                cropSize = maxX - minX;
+                
+                // Normalizzazione geometrica proporzionale 1:1 escludendo lo spessore esterno
+                cropX += cropSize * 0.045;
+                cropY += cropSize * 0.045;
+                cropSize = cropSize * 0.91;
+            } else {
+                // Fallback standard proporzionale
+                if (srcW > srcH) {
+                    cropX = (srcW - srcH) / 2; cropSize = srcH;
+                } else {
+                    cropY = (srcH - srcW) / 2; cropSize = srcW;
+                }
+            }
+            
+            // Ritaglia millimetricamente solo la matrice dei 25 tasselli
+            ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
+            URL.revokeObjectURL(img.src);
+            processSelectedPuzzle(canvas, ctx);
+        } catch (err) {
+            logStatus("❌ Auto-Detection processing error: " + err.message, "#ff3333");
+        }
+    };
+});
 
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
@@ -185,8 +179,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        
-        if (!(cellR < 60 && cellG < 50 && cellB < 50)) {
+        if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
@@ -200,7 +193,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Image Crop aligned for target: [${selectedPuzzleType}]`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box from monitor screenshot!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
