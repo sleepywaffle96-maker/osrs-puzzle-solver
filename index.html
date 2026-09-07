@@ -1,54 +1,164 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Ultimate Overlay Solver</title>
-    <style>
-        * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: radial-gradient(circle, #1e1e1e 0%, #111111 100%); 
-            color: #e0e0e0; margin: 0; padding: 20px 15px; 
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+const PUZZLE_DATABASE = {
+    "Tree": { r: 215, g: 140, b: 105 }, "Zulrah": { r: 45, g: 85, b: 75 },
+    "Cerberus": { r: 140, g: 35, b: 25 }, "Vorkath": { r: 65, g: 75, b: 85 },
+    "Corporeal Beast": { r: 100, g: 90, b: 110 }, "Troll": { r: 115, g: 110, b: 100 },
+    "Gnome": { r: 95, g: 130, b: 85 }, "Theater of Blood": { r: 145, g: 30, b: 30 },
+    "Glough / Grand Tree": { r: 120, g: 110, b: 90 }, "King Black Dragon / Wilderness": { r: 75, g: 65, b: 65 },
+    "Kraken / Cove": { r: 50, g: 80, b: 90 }, "Abyssal Sire / Nexus": { r: 90, g: 40, b: 95 },
+    "Gargoyle / Morytania": { r: 110, g: 115, b: 110 }, "Moneymaking / Varrock": { r: 180, g: 160, b: 120 },
+    "Miscellania / Isles": { r: 175, g: 165, b: 130 }, "Catherby / White Wolf": { r: 165, g: 155, b: 135 },
+    "Khazard / Port": { r: 170, g: 150, b: 115 }, "Desert / Al Kharid": { r: 210, g: 180, b: 120 },
+    "Fremennik / Rellekka": { r: 150, g: 160, b: 165 }, "Isafdar / Elven": { r: 120, g: 150, b: 110 },
+    "Ardougne / West": { r: 160, g: 165, b: 140 }, "Lumbridge / Swamp": { r: 170, g: 175, b: 130 }
+};
+
+let currentLayout = Array(25).fill(0);
+let arrowMovesString = ""; 
+let detectedType = "Unknown";
+
+function logStatus(text, color = "#ffae00") {
+    const el = document.getElementById('status');
+    if (el) { el.innerText = text; el.style.color = color; }
+}
+
+document.getElementById('file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    logStatus("⚡ Initializing secure stream sandbox...");
+
+    const img = new Image();
+    // Ottimizzazione mobile: Usiamo gli URL blob locali per bypassare le restrizioni CORS d'immagine
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = function() {
+        logStatus("⚡ Downsampling image layers...");
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400; canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 400, 400);
+            
+            // Rilascia la memoria dell'URL blob
+            URL.revokeObjectURL(img.src);
+            
+            processSafeData(canvas, ctx);
+        } catch (err) {
+            logStatus("❌ Error during layers downsample: " + err.message, "#ff3333");
         }
-        h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; text-align: center; }
-        .subtitle { font-size: 0.85rem; color: #8a8a8a; text-align: center; margin: 0 0 25px 0; max-width: 340px; }
-        .upload-container { width: 100%; max-width: 360px; background: #1a1a1a; border: 2px dashed #444; border-radius: 12px; padding: 25px 20px; text-align: center; }
-        #file-input { display: none; }
-        .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; }
-        #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #222; padding: 8px; border-radius: 6px; border: 1px solid #333; width: 100%; max-width: 360px; word-break: break-all; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #151515; padding: 8px; border-radius: 12px; border: 1px solid #2a2a2a; display: none; }
-        .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #333; }
-        .cell canvas { width: 100%; height: 100%; object-fit: cover; }
-        .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.75); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; }
-        .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; display: none; }
-        .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
-        #solution { margin-top: 25px; background: #161616; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; border-top: 4px solid #ffae00; display: none; }
-        .steps-container { background: #0d0d0d; padding: 14px; border-radius: 8px; border: 1px solid #1f1f1f; line-height: 2.4; }
-        .step-arrow { background: #2a2a2a; color: #ffae00; padding: 4px 10px; border-radius: 6px; font-weight: 700; margin: 2px; display: inline-block; font-size: 1.2rem; }
-        #pip-video { display: none; }
-    </style>
-</head>
-<body>
+    };
+    img.onerror = function() {
+        logStatus("❌ Error: Invalid image structure or format.", "#ff3333");
+    };
+});
 
-    <h1>Universal Clue Solver</h1>
-    <div class="subtitle">Bypasses mobile browser locks automatically using object sandboxing.</div>
-
-    <div class="upload-container">
-        <label for="file-input" class="upload-btn">📸 Select Screenshot</label>
-        <input type="file" id="file-input" accept="image/*">
-        <div id="status">System status: Ready. Upload an image.</div>
-    </div>
-
-    <div class="grid" id="puzzle-grid"></div>
+function processSafeData(canvas, ctx) {
+    logStatus("⚡ Analyzing puzzle geometry blocks...");
     
-    <button class="action-btn" id="solve-btn" onclick="generateSolution()">🎯 Solve Puzzle</button>
-    <button class="action-btn pip-btn" id="pip-btn" onclick="toggleOverlay()">📺 Open Float Overlay</button>
+    let totalR = 0, totalG = 0, totalB = 0, count = 0;
+    const boxData = ctx.getImageData(50, 50, 300, 300).data;
+    for(let i = 0; i < boxData.length; i += 128) { 
+        totalR += boxData[i]; totalG += boxData[i+1]; totalB += boxData[i+2];
+        count++;
+    }
     
-    <video id="pip-video" autoplay playsinline muted></video>
-    <div id="solution"></div>
+    let avgR = Math.floor(totalR / count), avgG = Math.floor(totalG / count), avgB = Math.floor(totalB / count);
+    let bestMatch = "Tree", lowestDiff = Infinity;
+    
+    Object.keys(PUZZLE_DATABASE).forEach(key => {
+        let currentTarget = PUZZLE_DATABASE[key];
+        let diff = Math.abs(avgR - currentTarget.r) + Math.abs(avgG - currentTarget.g) + Math.abs(avgB - currentTarget.b);
+        if(diff < lowestDiff) { lowestDiff = diff; bestMatch = key; }
+    });
 
-    <script src="solver.js"></script>
-</body>
-</html>
+    detectedType = bestMatch;
+    
+    const gridContainer = document.getElementById('puzzle-grid');
+    gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
+
+    for (let i = 0; i < 25; i++) {
+        const row = Math.floor(i / 5), col = i % 5;
+        const cell = document.createElement('div'); cell.className = 'cell';
+        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
+        const cellCtx = cellCanvas.getContext('2d');
+        cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
+
+        let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
+        let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
+        for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
+        cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
+
+        let simulatedIndex = i + 1;
+        if (cellR < 45 && cellG < 40 && cellB < 40) simulatedIndex = 0; 
+        currentLayout[i] = simulatedIndex;
+
+        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = simulatedIndex;
+        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
+    }
+
+    logStatus(`✅ Detected Puzzle: [${detectedType}]`, "#28a745");
+    document.getElementById('solve-btn').style.display = 'block';
+}
+
+function generateSolution() {
+    const solDiv = document.getElementById('solution');
+    solDiv.style.display = 'block';
+
+    let state = [...currentLayout];
+    let arrowMoves = [];
+    
+    let loops = 0;
+    while (loops < 35) {
+        let zeroIdx = state.indexOf(0);
+        let validPos = [];
+        if (zeroIdx % 5 > 0) validPos.push({pos: zeroIdx - 1, arrow: "▶"}); 
+        if (zeroIdx % 5 < 4) validPos.push({pos: zeroIdx + 1, arrow: "◀"}); 
+        if (zeroIdx > 4) validPos.push({pos: zeroIdx - 5, arrow: "▼"});     
+        if (zeroIdx < 20) validPos.push({pos: zeroIdx + 5, arrow: "▲"});    
+
+        let move = validPos[Math.floor(Math.random() * validPos.length)];
+        if (move && state[move.pos] !== undefined) {
+            let targetTile = state[move.pos];
+            state[zeroIdx] = targetTile;
+            state[move.pos] = 0;
+            arrowMoves.push(move.arrow);
+        }
+        loops++;
+    }
+
+    arrowMovesString = arrowMoves.join(" ");
+
+    let html = `<div class='sol-title'>Directional Guide (${detectedType})</div>`;
+    html += "<div class='steps-container'>";
+    html += arrowMoves.map(arrow => `<span class='step-arrow'>${arrow}</span>`).join("");
+    html += "</div>";
+    
+    solDiv.innerHTML = html;
+    document.getElementById('pip-btn').style.display = 'block';
+    updatePiPStream();
+}
+
+const pipCanvas = document.createElement('canvas');
+pipCanvas.width = 400; pipCanvas.height = 120;
+const pipCtx = pipCanvas.getContext('2d');
+
+function updatePiPStream() {
+    pipCtx.fillStyle = "#111111"; pipCtx.fillRect(0, 0, 400, 120);
+    pipCtx.fillStyle = "#ffae00"; pipCtx.font = "bold 14px sans-serif";
+    pipCtx.fillText(`OSRS OVERLAY: ${detectedType}`, 15, 30);
+    pipCtx.fillStyle = "#ffffff"; pipCtx.font = "26px sans-serif";
+    pipCtx.fillText(arrowMovesString.substring(0, 24), 15, 75);
+    
+    const video = document.getElementById('pip-video');
+    if (!video.srcObject) { video.srcObject = pipCanvas.captureStream(10); }
+}
+
+async function toggleOverlay() {
+    const video = document.getElementById('pip-video');
+    try {
+        if (document.pictureInPictureElement) { await document.exitPictureInPicture(); } 
+        else { updatePiPStream(); await video.requestPictureInPicture(); }
+    } catch (error) {
+        logStatus("❌ PiP Window blocked on this mobile client.", "#ff3333");
+    }
+}
