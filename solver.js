@@ -1,4 +1,3 @@
-// Database of exact RGB signatures for all 7 primary OSRS puzzles
 const PUZZLE_DATABASES = {
     "Troll": [
         {r:115,g:110,b:100},{r:110,g:105,b:95},{r:105,g:100,b:90},{r:100,g:95,b:85},{r:95,g:90,b:80},
@@ -81,11 +80,13 @@ function selectPuzzle(type, element) {
 }
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
-    if (!file || !selectedPuzzleType) return;
+    if (!file || file.length === 0 || !selectedPuzzleType) return;
 
     logStatus("... Scanning full screen for OSRS border bounds...");
     const img = new Image();
-    img.src = URL.createObjectURL(file);
+    
+    // CORREZIONE CRITICA: Passa il riferimento esatto al primo elemento dell'array di file
+    img.src = URL.createObjectURL(file[0]);
     
     img.onload = function() {
         try {
@@ -95,7 +96,6 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // Creazione di una Canvas temporanea ultraleggera per tracciare i bordi marroni
             let scanCanvas = document.createElement('canvas');
             scanCanvas.width = 200; scanCanvas.height = 200;
             let scanCtx = scanCanvas.getContext('2d');
@@ -110,8 +110,8 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                     let idx = (y * 200 + x) * 4;
                     let r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
                     
-                    // Colore legno interfaccia OSRS (Marrone)
-                    if (r > 50 && r < 120 && g > 40 && g < 95 && b < 65) {
+                    // Rileva il marrone legno di OSRS estendendo la precisione del filtro
+                    if (r > 45 && r < 125 && g > 35 && g < 100 && b < 65) {
                         if (x < minX) minX = x;
                         if (x > maxX) maxX = x;
                         if (y < minY) minY = y;
@@ -123,23 +123,20 @@ document.getElementById('file-input').addEventListener('change', function(e) {
 
             let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
 
-            if (foundBox && (maxX - minX) > 20) {
-                // Converte le coordinate scalate in coordinate reali dello screenshot intero
+            if (foundBox && (maxX - minX) > 15) {
                 cropX = (minX / 200) * srcW;
                 cropY = (minY / 200) * srcH;
                 cropSize = ((maxX - minX) / 200) * srcW;
                 
-                // Rimuove lo spessore esterno della cornice di legno per centrare i tasselli
+                // Centra la canvas escludendo il contorno esterno marrone dell'interfaccia
                 cropX += cropSize * 0.05;
                 cropY += cropSize * 0.05;
                 cropSize = cropSize * 0.90;
             } else {
                 if (srcW > srcH) {
-                    cropX = (srcW - srcH) / 2;
-                    cropSize = srcH;
+                    cropX = (srcW - srcH) / 2; cropSize = srcH;
                 } else {
-                    cropY = (srcH - srcW) / 2;
-                    cropSize = srcW;
+                    cropY = (srcH - srcW) / 2; cropSize = srcW;
                 }
             }
             
@@ -147,7 +144,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus(" Bounding tracking error: " + err.message, "#ff3333");
+            logStatus("❌ Bounding tracking error: " + err.message, "#ff3333");
         }
     };
 });
@@ -156,7 +153,6 @@ function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
     gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
 
-    // Seleziona il set cromatico corretto in base al pulsante cliccato
     const activeTargetSet = PUZZLE_DATABASES[selectedPuzzleType];
 
     for (let i = 0; i < 25; i++) {
@@ -173,7 +169,6 @@ function processSelectedPuzzle(canvas, ctx) {
 
         let detectedIndex = 0; 
         
-        // Identifica lo slot vuoto tramite soglia di oscurità (Nero di sfondo)
         if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
@@ -188,7 +183,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(` Image synchronized for target: [${selectedPuzzleType}]`, "#28a745");
+    logStatus(`✅ Image synchronized for target: [${selectedPuzzleType}]`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
@@ -203,7 +198,6 @@ function startSolving() {
     let targetMoves = [];
     let simulateState = [...state];
 
-    // Algoritmo predittivo per mappare il disordine reale delle 25 caselle
     for (let loop = 0; loop < 50; loop++) {
         let misplacedIdx = -1;
         for (let i = 0; i < 25; i++) {
@@ -228,6 +222,7 @@ function startSolving() {
             targetMoves.push(bestMove);
             let val = simulateState[bestMove.idx];
             simulateState[currentZero] = val;
+            simulateState[simulateState.indexOf(0)] = val; // Mantiene allineata l'inversione delle matrici lineari
             simulateState[bestMove.idx] = 0;
             currentZero = bestMove.idx;
         }
