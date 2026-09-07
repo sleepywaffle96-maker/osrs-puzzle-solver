@@ -82,78 +82,91 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Running structural geometric edge scan...");
-    const img = new Image();
-    img.src = URL.createObjectURL(file[0]); 
-    
-    img.onload = function() {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 400; canvas.height = 400;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            
-            let srcW = img.naturalWidth, srcH = img.naturalHeight;
-            
-            // Crea una canvas di analisi per tracciare le linee strutturali
-            let scanCanvas = document.createElement('canvas');
-            scanCanvas.width = 400; scanCanvas.height = Math.floor(400 * (srcH / srcW));
-            let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
-            scanCtx.drawImage(img, 0, 0, scanCanvas.width, scanCanvas.height);
-            let pData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data;
-            
-            // SCANSIONE GEOMETRICA AD ALTO CONTRASTO (Ignora l'inventario cercando la griglia fissa 5x5)
-            let minX = scanCanvas.width, maxX = 0, minY = scanCanvas.height, maxY = 0;
-            let foundGrid = false;
+    logStatus("🎯 DRAG the image below to center your puzzle box inside the orange frame.", "#ffae00");
 
-            // Restringiamo la ricerca nell'area logica centrale/sinistra dove compare il puzzle box sui client di gioco
-            let startX = Math.floor(scanCanvas.width * 0.15);
-            let endX = Math.floor(scanCanvas.width * 0.75);
-            let startY = Math.floor(scanCanvas.height * 0.1);
-            let endY = Math.floor(scanCanvas.height * 0.85);
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        originalImg.src = event.target.result;
+        originalImg.onload = function() {
+            const oldContainer = document.getElementById('crop-viewport-container');
+            if (oldContainer) oldContainer.remove();
 
-            for (let y = startY; y < endY; y += 2) {
-                for (let x = startX; x < endX; x += 2) {
-                    let i = (y * scanCanvas.width + x) * 4;
-                    let r = pData[i], g = pData[i+1], b = pData[i+2];
-                    
-                    // Cerca il colore delle linee scure di divisione e della cornice interna dei tasselli del puzzle box
-                    if (r > 35 && r < 75 && g > 25 && g < 60 && b < 45) {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                        foundGrid = true;
-                    }
-                }
-            }
+            // Crea un'area di puntamento visiva per l'utente (Overlay mobile-friendly)
+            const viewContainer = document.createElement('div');
+            viewContainer.id = 'crop-viewport-container';
+            viewContainer.style.position = 'relative';
+            viewContainer.style.width = '320px';
+            viewContainer.style.height = '320px';
+            viewContainer.style.overflow = 'hidden';
+            viewContainer.style.border = '3px solid #ffae00';
+            viewContainer.style.borderRadius = '12px';
+            viewContainer.style.marginTop = '15px';
+            viewContainer.style.background = '#000';
 
-            let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
+            const movableImg = document.createElement('img');
+            movableImg.src = originalImg.src;
+            movableImg.style.position = 'absolute';
+            movableImg.style.top = '0px';
+            movableImg.style.left = '0px';
+            movableImg.style.cursor = 'move';
+            movableImg.style.width = '800px'; // Dimensione scalata per facilitare il puntamento su PC/iPad
 
-            // Se rileva gli incroci geometrici della scacchiera, taglia via l'inventario ed il desktop di Windows
-            if (foundGrid && (maxX - minX) > 40) {
-                let scale = srcW / scanCanvas.width;
-                cropX = minX * scale;
-                cropY = minY * scale;
-                cropSize = (maxX - minX) * scale;
+            // Mirino fisso centrale di riferimento
+            const crosshair = document.createElement('div');
+            crosshair.style.position = 'absolute';
+            crosshair.style.top = '10px'; crosshair.style.left = '10px';
+            crosshair.style.width = '300px'; crosshair.style.height = '300px';
+            crosshair.style.border = '2px dashed rgba(255, 174, 0, 0.6)';
+            crosshair.style.pointerEvents = 'none';
+
+            // Pulsante di conferma ritaglio
+            const confirmBtn = document.createElement('button');
+            confirmBtn.innerText = "⚡ CONFIRM CROP ZONE";
+            confirmBtn.style.width = '100%'; confirmBtn.style.padding = '12px';
+            confirmBtn.style.marginTop = '10px'; confirmBtn.style.background = '#28a745';
+            confirmBtn.style.color = '#fff'; confirmBtn.style.border = 'none';
+            confirmBtn.style.fontWeight = 'bold'; confirmBtn.style.borderRadius = '6px';
+
+            viewContainer.appendChild(movableImg);
+            viewContainer.appendChild(crosshair);
+            document.getElementById('upload-box').after(confirmBtn);
+            document.getElementById('upload-box').after(viewContainer);
+
+            // Gestione trascinamento Drag & Drop (Compatibile con mouse e touchscreen dell'iPad)
+            let isDragging = false, startX, startY, currentLeft = 0, currentTop = 0;
+
+            const startDrag = (clientX, clientY) => { isDragging = true; startX = clientX - currentLeft; startY = clientY - currentTop; };
+            const moveDrag = (clientX, clientY) => { if (!isDragging) return; currentLeft = clientX - startX; currentTop = clientY - startY; movableImg.style.left = `${currentLeft}px`; movableImg.style.top = `${currentTop}px`; };
+            const endDrag = () => { isDragging = false; };
+
+            movableImg.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
+            window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+            window.addEventListener('mouseup', endDrag);
+
+            movableImg.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY));
+            movableImg.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
+            movableImg.addEventListener('touchend', endDrag);
+
+            confirmBtn.onclick = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 400; canvas.height = 400;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                // Estrae la porzione esatta racchiusa nel mirino calcolando la scala geometrica
+                let scale = originalImg.naturalWidth / 800;
+                let finalX = -currentLeft * scale;
+                let finalY = -currentTop * scale;
+                let finalSize = 320 * scale;
+
+                ctx.drawImage(originalImg, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
                 
-                // Esclude millimetricamente lo spessore esterno dei bordi per allinearsi ai tasselli
-                cropX += cropSize * 0.052;
-                cropY += cropSize * 0.052;
-                cropSize = cropSize * 0.89;
-            } else {
-                // Fallback universale se l'immagine è già ritagliata parzialmente sul gioco
-                if (srcW > srcH) {
-                    cropX = (srcW - srcH) / 2; cropSize = srcH * 0.58; cropY = srcH * 0.22;
-                }
-            }
-            
-            ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
-            URL.revokeObjectURL(img.src);
-            processSelectedPuzzle(canvas, ctx);
-        } catch (err) {
-            logStatus("❌ Structural scan error: " + err.message, "#ff3333");
-        }
+                viewContainer.remove();
+                confirmBtn.remove();
+                processSelectedPuzzle(canvas, ctx);
+            };
+        };
     };
+    reader.readAsDataURL(file);
 });
 
 function processSelectedPuzzle(canvas, ctx) {
@@ -184,7 +197,6 @@ function processSelectedPuzzle(canvas, ctx) {
         }
         
         currentLayout[i] = detectedIndex;
-
         const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = detectedIndex;
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
