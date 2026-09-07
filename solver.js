@@ -56,6 +56,9 @@ let originalImg = new Image();
 let calculatedSteps = []; 
 let currentStepIndex = 0;
 
+// Coordinate dei punti di click per il ritaglio manuale assistito
+let clickPoints = [];
+
 const pipCanvas = document.createElement('canvas');
 pipCanvas.width = 300; pipCanvas.height = 300; 
 const pipCtx = pipCanvas.getContext('2d');
@@ -82,72 +85,86 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("... Scanning full screen for OSRS border bounds...");
-    const img = new Image();
-    
-    // CORREZIONE CRITICA: Passa il riferimento esatto al primo elemento dell'array di file
-    img.src = URL.createObjectURL(file[0]);
-    
-    img.onload = function() {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 400; canvas.height = 400;
-            const ctx = canvas.getContext('2d');
-            
-            let srcW = img.naturalWidth, srcH = img.naturalHeight;
-            
-            let scanCanvas = document.createElement('canvas');
-            scanCanvas.width = 200; scanCanvas.height = 200;
-            let scanCtx = scanCanvas.getContext('2d');
-            scanCtx.drawImage(img, 0, 0, 200, 200);
-            let pixels = scanCtx.getImageData(0, 0, 200, 200).data;
-            
-            let minX = 200, maxX = 0, minY = 200, maxY = 0;
-            let foundBox = false;
+    logStatus("📍 CLICK on the TOP-LEFT corner of the 5x5 puzzle box inside the image below.", "#ffae00");
+    clickPoints = [];
 
-            for (let y = 5; y < 195; y++) {
-                for (let x = 5; x < 195; x++) {
-                    let idx = (y * 200 + x) * 4;
-                    let r = pixels[idx], g = pixels[idx+1], b = pixels[idx+2];
-                    
-                    // Rileva il marrone legno di OSRS estendendo la precisione del filtro
-                    if (r > 45 && r < 125 && g > 35 && g < 100 && b < 65) {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                        foundBox = true;
-                    }
-                }
-            }
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        originalImg.src = event.target.result;
+        originalImg.onload = function() {
+            // Rimuove vecchie canvas interattive se esistenti
+            const oldCanvas = document.getElementById('debug-click-canvas');
+            if (oldCanvas) oldCanvas.remove();
 
-            let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
+            // Crea una canvas visibile temporanea per raccogliere i click del giocatore
+            const displayCanvas = document.createElement('canvas');
+            displayCanvas.id = 'debug-click-canvas';
+            displayCanvas.style.maxWidth = '100%';
+            displayCanvas.style.width = '360px';
+            displayCanvas.style.border = '2px solid #ffae00';
+            displayCanvas.style.marginTop = '15px';
+            displayCanvas.style.borderRadius = '8px';
+            displayCanvas.style.cursor = 'crosshair';
 
-            if (foundBox && (maxX - minX) > 15) {
-                cropX = (minX / 200) * srcW;
-                cropY = (minY / 200) * srcH;
-                cropSize = ((maxX - minX) / 200) * srcW;
+            displayCanvas.width = originalImg.naturalWidth;
+            displayCanvas.height = originalImg.naturalHeight;
+            const dCtx = displayCanvas.getContext('2d');
+            dCtx.drawImage(originalImg, 0, 0);
+
+            // Inserisce la canvas subito sotto la zona di upload
+            document.getElementById('upload-box').after(displayCanvas);
+
+            displayCanvas.addEventListener('click', function(evt) {
+                const rect = displayCanvas.getBoundingClientRect();
+                const scaleX = displayCanvas.width / rect.width;
+                const scaleY = displayCanvas.height / rect.height;
                 
-                // Centra la canvas escludendo il contorno esterno marrone dell'interfaccia
-                cropX += cropSize * 0.05;
-                cropY += cropSize * 0.05;
-                cropSize = cropSize * 0.90;
-            } else {
-                if (srcW > srcH) {
-                    cropX = (srcW - srcH) / 2; cropSize = srcH;
-                } else {
-                    cropY = (srcH - srcW) / 2; cropSize = srcW;
+                const clickX = (evt.clientX - rect.left) * scaleX;
+                const clickY = (evt.clientY - rect.top) * scaleY;
+
+                clickPoints.push({ x: clickX, y: clickY });
+
+                // Disegna un cerchietto di controllo sul punto cliccato
+                dCtx.fillStyle = "#ffae00";
+                dCtx.beginPath();
+                dCtx.arc(clickX, clickY, displayCanvas.width * 0.015, 0, Math.PI * 2);
+                dCtx.fill();
+
+                if (clickPoints.length === 1) {
+                    logStatus("📍 Now CLICK on the BOTTOM-RIGHT corner of the 5x5 puzzle box.", "#ffae00");
+                } else if (clickPoints.length === 2) {
+                    logStatus("⚡ Cropping and segmenting selected zone...", "#28a745");
+                    setTimeout(() => {
+                        processManualCrop(displayCanvas);
+                    }, 200);
                 }
-            }
-            
-            ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
-            URL.revokeObjectURL(img.src);
-            processSelectedPuzzle(canvas, ctx);
-        } catch (err) {
-            logStatus("❌ Bounding tracking error: " + err.message, "#ff3333");
-        }
+            });
+        };
     };
+    reader.readAsDataURL(file[0]);
 });
+
+function processManualCrop(displayCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400; canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+
+    let p1 = clickPoints[0];
+    let p2 = clickPoints[1];
+
+    let cropX = Math.min(p1.x, p2.x);
+    let cropY = Math.min(p1.y, p2.y);
+    let cropW = Math.abs(p2.x - p1.x);
+    let cropH = Math.abs(p2.y - p1.y);
+
+    // Isola ed estrae solo l'area racchiusa dai tuoi due click, eliminando il resto dello schermo del PC
+    ctx.drawImage(originalImg, cropX, cropY, cropW, cropH, 0, 0, 400, 400);
+    
+    // Rimuove la canvas di calibrazione visiva dopo l'estrazione con successo
+    displayCanvas.remove();
+
+    processSelectedPuzzle(canvas, ctx);
+}
 
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
@@ -169,7 +186,7 @@ function processSelectedPuzzle(canvas, ctx) {
 
         let detectedIndex = 0; 
         
-        if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
+        if (!(cellR < 60 && cellG < 50 && cellB < 50)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
@@ -183,7 +200,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Image synchronized for target: [${selectedPuzzleType}]`, "#28a745");
+    logStatus(`✅ Image Crop aligned for target: [${selectedPuzzleType}]`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
@@ -222,7 +239,7 @@ function startSolving() {
             targetMoves.push(bestMove);
             let val = simulateState[bestMove.idx];
             simulateState[currentZero] = val;
-            simulateState[simulateState.indexOf(0)] = val; // Mantiene allineata l'inversione delle matrici lineari
+            simulateState[simulateState.indexOf(0)] = val;
             simulateState[bestMove.idx] = 0;
             currentZero = bestMove.idx;
         }
