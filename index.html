@@ -9,41 +9,36 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: radial-gradient(circle, #1e1e1e 0%, #111111 100%); 
-            color: #e0e0e0; 
-            margin: 0; 
-            padding: 20px 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center;
-            min-height: 100vh;
+            color: #e0e0e0; margin: 0; padding: 20px 15px; 
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
-        h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); text-align: center; }
-        .subtitle { font-size: 0.85rem; color: #8a8a8a; text-align: center; margin: 0 0 25px 0; max-width: 340px; line-height: 1.4; }
-        .upload-container { width: 100%; max-width: 360px; background: #1a1a1a; border: 2px dashed #444; border-radius: 12px; padding: 25px 20px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; text-align: center; }
+        .subtitle { font-size: 0.85rem; color: #8a8a8a; text-align: center; margin: 0 0 25px 0; max-width: 340px; }
+        .upload-container { width: 100%; max-width: 360px; background: #1a1a1a; border: 2px dashed #444; border-radius: 12px; padding: 25px 20px; text-align: center; }
         #file-input { display: none; }
-        .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; box-shadow: 0 4px 12px rgba(212, 145, 0, 0.3); text-transform: uppercase; letter-spacing: 0.5px; }
-        #status { font-weight: 600; color: #8a8a8a; margin-top: 12px; font-size: 0.9rem; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #151515; padding: 8px; border-radius: 12px; border: 1px solid #2a2a2a; box-shadow: inset 0 4px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5); display: none; }
+        .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; }
+        #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #222; padding: 8px; border-radius: 6px; border: 1px solid #333; width: 100%; max-width: 360px; word-break: break-all; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #151515; padding: 8px; border-radius: 12px; border: 1px solid #2a2a2a; display: none; }
         .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #333; }
         .cell canvas { width: 100%; height: 100%; object-fit: cover; }
-        .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.75); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; font-weight: bold; }
-        .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(40, 167, 69, 0.3); text-transform: uppercase; display: none; }
-        .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); box-shadow: 0 4px 14px rgba(0, 123, 255, 0.3); }
-        #solution { margin-top: 25px; background: #161616; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; font-size: 0.95rem; border-top: 4px solid #ffae00; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: none; }
-        .steps-container { background: #0d0d0d; padding: 14px; border-radius: 8px; border: 1px solid #1f1f1f; line-height: 2.4; word-break: break-all; }
-        .step-arrow { background: #2a2a2a; color: #ffae00; padding: 4px 10px; border-radius: 6px; font-weight: 700; margin: 2px; display: inline-block; font-size: 1.2rem; border: 1px solid #3d3d3d; }
-        #pip-video { display: none; width: 300px; height: 150px; }
+        .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.75); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; }
+        .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; display: none; }
+        .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
+        #solution { margin-top: 25px; background: #161616; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; border-top: 4px solid #ffae00; display: none; }
+        .steps-container { background: #0d0d0d; padding: 14px; border-radius: 8px; border: 1px solid #1f1f1f; line-height: 2.4; }
+        .step-arrow { background: #2a2a2a; color: #ffae00; padding: 4px 10px; border-radius: 6px; font-weight: 700; margin: 2px; display: inline-block; font-size: 1.2rem; }
+        #pip-video { display: none; }
     </style>
 </head>
 <body>
 
     <h1>Universal Clue Solver</h1>
-    <div class="subtitle">Upload any screenshot. The engine auto-detects all puzzle boxes (Tree, Zulrah, Cerberus, Maps) and provides arrow-based tracking.</div>
+    <div class="subtitle">Bypasses mobile browser locks automatically using object sandboxing.</div>
 
     <div class="upload-container">
         <label for="file-input" class="upload-btn">📸 Select Screenshot</label>
         <input type="file" id="file-input" accept="image/*">
-        <div id="status">Waiting for image...</div>
+        <div id="status">System status: Ready. Upload an image.</div>
     </div>
 
     <div class="grid" id="puzzle-grid"></div>
