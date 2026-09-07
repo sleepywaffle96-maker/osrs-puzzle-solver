@@ -21,14 +21,14 @@
         
         /* EFFETTO PULSANTE CHE SI GONFIA */
         .selector-btn { 
-            background: #2b211a; border: 2px solid #543f32; border-radius: 8px; padding: 8px; 
+            background: #2b211a; border: 2px solid #543f32; border-radius: 8px; padding: 12px; 
             text-align: center; color: #fff; font-weight: bold; cursor: pointer; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            will-change: transform; /* Ottimizza l'animazione su mobile */
+            will-change: transform;
         }
         
-        /* Quando passi il mouse (Desktop) o tieni premuto (Mobile) il pulsante si allarga del 6% */
+        /* Quando ci passi sopra con il mouse o lo tocchi, il pulsante si gonfia del 6% */
         .selector-btn:hover { 
             transform: scale(1.06); 
             border-color: #ba8000;
@@ -38,7 +38,7 @@
         .selector-btn img { width: 80px; height: 80px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #1a1410; background: #000; pointer-events: none; }
         .selector-btn span { font-size: 0.9rem; color: #ffae00; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; pointer-events: none; }
         
-        /* Stato Selezionato */
+        /* Stato Selezionato con bagliore oro */
         .selector-btn.active { border-color: #ffae00; background: #47321c; transform: scale(1.03); box-shadow: 0 0 14px rgba(255,174,0,0.4); }
 
         /* Contenitore Caricamento Foto */
@@ -48,7 +48,7 @@
         .upload-btn:hover { transform: scale(1.02); }
         #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #110c08; padding: 10px; border-radius: 6px; border: 1px solid #3a2a1c; }
         
-        /* Griglia di elaborazione interna */
+        /* Anteprima scacchiera rilevata */
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #110d0a; padding: 8px; border-radius: 12px; border: 2px solid #3a2b1f; display: none; }
         .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #443322; }
         .cell canvas { width: 100%; height: 100%; object-fit: cover; }
@@ -71,7 +71,7 @@
     <h1>Select Puzzle Box</h1>
     <div class="subtitle">Click on your puzzle background. The grid will inflate slightly on selection.</div>
 
-    <!-- Griglia dei bottoni collegata alle immagini locali caricate nel tuo archivio GitHub -->
+    <!-- Schermata di Selezione con le immagini locali caricate sul tuo GitHub -->
     <div class="selector-grid">
         <div class="selector-btn" onclick="selectPuzzle('Troll', this)">
             <img src="troll.png" alt="Troll">
@@ -103,11 +103,11 @@
         </div>
     </div>
 
-    <!-- Area Caricamento Foto -->
+    <!-- Area Caricamento Screenshot -->
     <div class="upload-container" id="upload-box">
         <label for="file-input" class="upload-btn">📸 Select Screenshot</label>
         <input type="file" id="file-input" accept="image/*">
-        <div id="status">Variant configuration active. Awaiting image file.</div>
+        <div id="status">Awaiting image file...</div>
     </div>
 
     <div class="grid" id="puzzle-grid"></div>
@@ -122,6 +122,7 @@
     <video id="pip-video" autoplay playsinline muted></video>
     <div id="solution"></div>
 
+    <!-- Mantiene il collegamento al tuo motore logico solver.js separato -->
     <script src="solver.js"></script>
 </body>
 </html>
