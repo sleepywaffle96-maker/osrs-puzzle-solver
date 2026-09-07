@@ -70,7 +70,7 @@ function selectPuzzle(type, element) {
     document.querySelectorAll('.selector-btn').forEach(btn => btn.classList.remove('active'));
     element.classList.add('active');
     document.getElementById('upload-box').style.display = 'block';
-    logStatus(`Mode [${type}] configured. Ready for iPad screenshot upload.`);
+    logStatus(`Mode [${type}] configured. Ready for upload.`);
     
     const video = document.getElementById('pip-video');
     if (video && !video.srcObject) {
@@ -82,7 +82,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Auto-detecting iPad interface layers...");
+    logStatus("⚡ Dynamically tracking OSRS puzzle interface...");
     const img = new Image();
     img.src = URL.createObjectURL(file[0]); 
     
@@ -94,21 +94,58 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // CALCOLO COORDINATE REALI IPAD: 
-            // In OSRS Mobile per iPad il puzzle box è sempre ancorato al centro perfetto dello schermo.
-            // Occupa esattamente il 53.5% dell'altezza totale dello schermo (srcH).
-            let cropSize = srcH * 0.535;
+            let scanCanvas = document.createElement('canvas');
+            scanCanvas.width = 400; scanCanvas.height = Math.floor(400 * (srcH / srcW));
+            let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+            scanCtx.drawImage(img, 0, 0, scanCanvas.width, scanCanvas.height);
             
-            // Centra l'inquadratura escludendo la chat a sinistra e l'inventario a destra
-            let cropX = (srcW / 2) - (cropSize * 0.5);
-            let cropY = (srcH / 2) - (cropSize * 0.44); // Leggero offset verticale per allinearsi ai bordi marroni in-game
+            let pData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data;
+            
+            // Trova i limiti della cornice marrone analizzando le righe e le colonne reali
+            let left = scanCanvas.width, right = 0, top = scanCanvas.height, bottom = 0;
+            let found = false;
 
-            // Ritaglia millimetricamente solo la matrice dei 25 tasselli interni
+            for (let y = Math.floor(scanCanvas.height * 0.1); y < scanCanvas.height * 0.9; y += 2) {
+                for (let x = Math.floor(scanCanvas.width * 0.2); x < scanCanvas.width * 0.8; x += 2) {
+                    let i = (y * scanCanvas.width + x) * 4;
+                    let r = pData[i], g = pData[i+1], b = pData[i+2];
+                    
+                    // Riconoscimento ultra-preciso della tonalità legno di OSRS
+                    if (r > 60 && r < 115 && g > 45 && g < 90 && b < 55) {
+                        if (x < left) left = x;
+                        if (x > right) right = x;
+                        if (y < top) top = y;
+                        if (y > bottom) bottom = y;
+                        found = true;
+                    }
+                }
+            }
+
+            let cropX, cropY, cropSize;
+
+            if (found && (right - left) > 50) {
+                // Calcola le coordinate reali riscalandole sulla risoluzione nativa dell'iPad
+                let scale = srcW / scanCanvas.width;
+                cropX = left * scale;
+                cropY = top * scale;
+                cropSize = (right - left) * scale;
+
+                // Stringe l'inquadratura escludendo la cornice esterna marrone
+                cropX += cropSize * 0.055;
+                cropY += cropSize * 0.055;
+                cropSize = cropSize * 0.89;
+            } else {
+                // Fallback di sicurezza proporzionale se l'immagine ha problemi
+                cropSize = srcH * 0.54;
+                cropX = (srcW / 2) - (cropSize / 2);
+                cropY = (srcH / 2) - (cropSize * 0.44);
+            }
+            
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Interface mapping failure: " + err.message, "#ff3333");
+            logStatus("❌ Interface alignment fail: " + err.message, "#ff3333");
         }
     };
 });
@@ -126,15 +163,13 @@ function processSelectedPuzzle(canvas, ctx) {
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
-        let imgData = cellCtx.getImageData(25, 25, 5, 5).data;
+        let imgData = cellCtx.getImageData(15, 15, 20, 20).data;
         let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
         for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        
-        // Identifica lo slot vuoto tramite i pixel scuri (il quadratino nero in alto a destra nell'albero)
-        if (!(cellR < 48 && cellG < 42 && cellB < 42)) {
+        if (!(cellR < 45 && cellG < 38 && cellB < 38)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
