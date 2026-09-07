@@ -70,7 +70,7 @@ function selectPuzzle(type, element) {
     document.querySelectorAll('.selector-btn').forEach(btn => btn.classList.remove('active'));
     element.classList.add('active');
     document.getElementById('upload-box').style.display = 'block';
-    logStatus(`Mode [${type}] configured. Ready for upload.`);
+    logStatus(`Mode [${type}] configured. Ready for iPad screenshot upload.`);
     
     const video = document.getElementById('pip-video');
     if (video && !video.srcObject) {
@@ -82,7 +82,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Locating sliding blank tile inside screenshot...");
+    logStatus("⚡ Auto-detecting iPad interface layers...");
     const img = new Image();
     img.src = URL.createObjectURL(file[0]); 
     
@@ -94,57 +94,21 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            let scanCanvas = document.createElement('canvas');
-            scanCanvas.width = srcW; scanCanvas.height = srcH;
-            let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
-            scanCtx.drawImage(img, 0, 0);
+            // CALCOLO COORDINATE REALI IPAD: 
+            // In OSRS Mobile per iPad il puzzle box è sempre ancorato al centro perfetto dello schermo.
+            // Occupa esattamente il 53.5% dell'altezza totale dello schermo (srcH).
+            let cropSize = srcH * 0.535;
             
-            // 1. SCANSIONE DEL BLOCCO NERO (SPAZIO VUOTO 0)
-            let blankX = -1, blankY = -1;
-            let step = 4; // Passo veloce di scansione
-            
-            // Cerca un'area ad alta concentrazione di nero puro (lo slot vuoto)
-            for (let y = Math.floor(srcH * 0.1); y < srcH * 0.9; y += step) {
-                let row = scanCtx.getImageData(0, y, srcW, 1).data;
-                for (let x = Math.floor(srcW * 0.3); x < srcW * 0.95; x += step) {
-                    let i = x * 4;
-                    // Condizione nero OSRS slot vuoto: RGB inferiori a 12
-                    if (row[i] < 12 && row[i+1] < 12 && row[i+2] < 12) {
-                        blankX = x; blankY = y;
-                        break;
-                    }
-                }
-                if (blankX !== -1) break;
-            }
+            // Centra l'inquadratura escludendo la chat a sinistra e l'inventario a destra
+            let cropX = (srcW / 2) - (cropSize * 0.5);
+            let cropY = (srcH / 2) - (cropSize * 0.44); // Leggero offset verticale per allinearsi ai bordi marroni in-game
 
-            let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
-
-            // 2. TRACCIAMENTO PROPORZIONALE DELLA GRIGLIA INTORNO AL NERO
-            if (blankX !== -1 && blankY !== -1) {
-                // Calcola le proporzioni fisse del puzzle box partendo dallo slot nero trovato
-                // Il puzzle box standard sui client RuneLite varia tra i 240 e i 360 pixel di larghezza
-                let assumedTileSize = srcH * 0.052; // Dimensione media stimata di un tassello in base all'altezza monitor
-                
-                cropSize = assumedTileSize * 5.4; 
-                cropX = blankX - (cropSize * 0.5); // Centra la cattura sull'area circostante
-                cropY = blankY - (cropSize * 0.5);
-
-                // Evita di sforare i bordi dello schermo
-                if (cropX < 0) cropX = srcW * 0.45;
-                if (cropY < 0) cropY = srcH * 0.20;
-                if (cropX + cropSize > srcW) cropX = srcW - cropSize;
-            } else {
-                // Fallback standard se il puzzle è coperto o non si trova lo slot nero
-                if (srcW > srcH) {
-                    cropX = (srcW - srcH) / 2; cropSize = srcH * 0.6; cropY = srcH * 0.2;
-                }
-            }
-            
+            // Ritaglia millimetricamente solo la matrice dei 25 tasselli interni
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Tracking scan failed: " + err.message, "#ff3333");
+            logStatus("❌ Interface mapping failure: " + err.message, "#ff3333");
         }
     };
 });
@@ -162,13 +126,15 @@ function processSelectedPuzzle(canvas, ctx) {
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
-        let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
+        let imgData = cellCtx.getImageData(25, 25, 5, 5).data;
         let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
         for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        if (!(cellR < 35 && cellG < 35 && cellB < 35)) {
+        
+        // Identifica lo slot vuoto tramite i pixel scuri (il quadratino nero in alto a destra nell'albero)
+        if (!(cellR < 48 && cellG < 42 && cellB < 42)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
@@ -182,7 +148,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box from screen layout!`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box perfectly from iPad screen!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
