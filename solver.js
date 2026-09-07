@@ -80,11 +80,12 @@ function selectPuzzle(type, element) {
 }
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
+    // RISOLUZIONE BUG: Aggiunto controllo di sicurezza file.length e aggancio corretto di file[0]
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Scanning full iPad screen layout dynamically...");
+    logStatus("⚡ Scanning full image dynamically for OSRS box interfaces...");
     const img = new Image();
-    img.src = URL.createObjectURL(file); 
+    img.src = URL.createObjectURL(file[0]); 
     
     img.onload = function() {
         try {
@@ -94,15 +95,15 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // Crea una canvas di scansione a risoluzione ridotta controllata per non rallentare l'iPad
+            // Crea una canvas di campionamento ad alta efficienza per esaminare l'intero schermo
             let scanCanvas = document.createElement('canvas');
-            scanCanvas.width = 300; scanCanvas.height = Math.floor(300 * (srcH / srcW));
+            scanCanvas.width = 400; scanCanvas.height = Math.floor(400 * (srcH / srcW));
             let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
             scanCtx.drawImage(img, 0, 0, scanCanvas.width, scanCanvas.height);
             
             let pData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data;
             
-            // Scansione a tappeto: individua i confini reali della cornice di legno marrone OSRS
+            // Scansione universale sull'intera superficie per tracciare il riquadro marrone OSRS
             let left = scanCanvas.width, right = 0, top = scanCanvas.height, bottom = 0;
             let foundBorder = false;
 
@@ -111,8 +112,8 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                     let i = (y * scanCanvas.width + x) * 4;
                     let r = pData[i], g = pData[i+1], b = pData[i+2];
                     
-                    // Filtro cromatico tarato sul marrone legno originale di OSRS
-                    if (r > 58 && r < 115 && g > 44 && g < 90 && b < 52) {
+                    // Riconoscimento cromatico espanso per isolare la cornice di RuneLite, iPad o Mobile
+                    if (r > 55 && r < 120 && g > 42 && g < 95 && b < 60) {
                         if (x < left) left = x;
                         if (x > right) right = x;
                         if (y < top) top = y;
@@ -124,22 +125,24 @@ document.getElementById('file-input').addEventListener('change', function(e) {
 
             let cropX, cropY, cropSize;
 
-            // Se rileva la cornice (spostata a destra per via della chat), calcola la posizione reale al millimetro
-            if (foundBorder && (right - left) > 40) {
+            // Se trova la struttura quadrata in qualunque punto del monitor, la estrae al volo
+            if (foundBorder && (right - left) > 35) {
                 let scale = srcW / scanCanvas.width;
                 cropX = left * scale;
                 cropY = top * scale;
                 cropSize = (right - left) * scale;
 
-                // Calibrazione millimetrica per rimuovere i bordi esterni della cornice di legno
-                cropX += cropSize * 0.058;
-                cropY += cropSize * 0.058;
-                cropSize = cropSize * 0.884;
+                // Margine geometrico di precisione per isolare solo le 25 tessere interne
+                cropX += cropSize * 0.054;
+                cropY += cropSize * 0.054;
+                cropSize = cropSize * 0.886;
             } else {
-                // Fallback proporzionale se l'immagine ha problemi
-                cropSize = srcH * 0.535;
-                cropX = (srcW / 2) - (cropSize * 0.5);
-                cropY = (srcH / 2) - (cropSize * 0.44);
+                // Fallback di centraggio di emergenza se la foto è già stata pre-ritagliata
+                if (srcW > srcH) {
+                    cropX = (srcW - srcH) / 2; cropSize = srcH; cropY = 0;
+                } else {
+                    cropY = (srcH - srcW) / 2; cropSize = srcW; cropX = 0;
+                }
             }
             
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
@@ -164,13 +167,13 @@ function processSelectedPuzzle(canvas, ctx) {
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
-        let imgData = cellCtx.getImageData(15, 15, 20, 20).data;
+        let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
         let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
         for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        if (!(cellR < 45 && cellG < 38 && cellB < 38)) {
+        if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
@@ -184,7 +187,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box perfectly from iPad screen!`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box from screenshot layout!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
@@ -246,6 +249,7 @@ function startSolving() {
 function nextStep() {
     if (currentStepIndex < calculatedSteps.length - 1) { currentStepIndex++; renderOverlayGrid(); }
 }
+// Blocco finale per il tracciamento dei tasti direzionali nel flusso PiP
 function prevStep() {
     if (currentStepIndex > 0) { currentStepIndex--; renderOverlayGrid(); }
 }
