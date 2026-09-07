@@ -1,55 +1,3 @@
-const PUZZLE_DATABASES = {
-    "Troll": [
-        {r:115,g:110,b:100},{r:110,g:105,b:95},{r:105,g:100,b:90},{r:100,g:95,b:85},{r:95,g:90,b:80},
-        {r:110,g:105,b:95},{r:120,g:115,b:105},{r:125,g:120,b:110},{r:115,g:110,b:100},{r:100,g:95,b:85},
-        {r:105,g:100,b:90},{r:125,g:120,b:110},{r:130,g:125,b:115},{r:120,g:115,b:105},{r:105,g:100,b:90},
-        {r:100,g:95,b:85},{r:115,g:110,b:100},{r:120,g:115,b:105},{r:110,g:105,b:95},{r:95,g:90,b:80},
-        {r:95,g:90,b:80},{r:100,g:95,b:85},{r:105,g:100,b:90},{r:95,g:90,b:80}
-    ],
-    "Tree": [
-        {r:215,g:140,b:105},{r:210,g:135,b:100},{r:205,g:125,b:95},{r:195,g:115,b:90},{r:185,g:105,b:85},
-        {r:210,g:135,b:100},{r:175,g:110,b:75},{r:160,g:100,b:70},{r:150,g:90,b:65},{r:180,g:100,b:80},
-        {r:200,g:120,b:90},{r:155,g:95,b:65},{r:115,g:80,b:55},{r:135,g:85,b:60},{r:175,g:95,b:75},
-        {r:165,g:115,b:85},{r:130,g:90,b:60},{r:90,g:65,b:45},{r:110,g:75,b:50},{r:145,g:85,b:70},
-        {r:120,g:135,b:95},{r:115,g:125,b:85},{r:95,g:70,b:50},{r:105,g:115,b:80}
-    ],
-    "Castle": [
-        {r:160,g:140,b:110},{r:155,g:135,b:105},{r:150,g:130,b:100},{r:145,g:125,b:95},{r:140,g:120,b:90},
-        {r:155,g:135,b:105},{r:130,g:110,b:80},{r:120,g:100,b:75},{r:115,g:95,b:70},{r:135,g:115,b:85},
-        {r:150,g:130,b:100},{r:120,g:100,b:75},{r:95,g:80,b:55},{r:105,g:85,b:60},{r:130,g:110,b:80},
-        {r:145,g:125,b:95},{r:115,g:95,b:70},{r:105,g:85,b:60},{r:100,g:80,b:55},{r:125,g:105,b:75},
-        {r:140,g:120,b:90},{r:135,g:115,b:85},{r:130,g:110,b:80},{r:125,g:105,b:75}
-    ],
-    "Zulrah": [
-        {r:45,g:85,b:75},{r:40,g:80,b:70},{r:50,g:95,b:85},{r:55,g:100,b:90},{r:60,g:110,b:95},
-        {r:40,g:75,b:65},{r:110,g:60,b:40},{r:120,g:70,b:45},{r:115,g:65,b:40},{r:55,g:95,b:85},
-        {r:50,g:90,b:80},{r:130,g:75,b:50},{r:140,g:85,b:55},{r:135,g:80,b:50},{r:60,g:105,b:90},
-        {r:45,g:80,b:70},{r:40,g:75,b:65},{r:45,g:80,b:70},{r:50,g:85,b:75},{r:55,g:90,b:80},
-        {r:35,g:65,b:55},{r:30,g:60,b:50},{r:35,g:65,b:55},{r:40,g:70,b:60}
-    ],
-    "Cerberus": [
-        {r:140,g:35,b:25},{r:130,g:30,b:20},{r:145,g:40,b:30},{r:150,g:45,b:35},{r:120,g:25,b:20},
-        {r:100,g:25,b:20},{r:90,g:20,b:15},{r:85,g:15,b:10},{r:95,g:25,b:20},{r:110,g:30,b:25},
-        {r:125,g:40,b:30},{r:80,g:20,b:15},{r:55,g:15,b:10},{r:75,g:25,b:20},{r:105,g:35,b:25},
-        {r:115,g:35,b:25},{r:75,g:20,b:15},{r:65,g:15,b:10},{r:60,g:15,b:10},{r:90,g:30,b:20},
-        {r:95,g:30,b:25},{r:85,g:25,b:20},{r:70,g:20,b:15},{r:80,g:25,b:20}
-    ],
-    "Gnome": [
-        {r:95,g:130,b:85},{r:90,g:125,b:80},{r:85,g:120,b:75},{r:80,g:115,b:70},{r:75,g:110,b:65},
-        {r:90,g:125,b:80},{r:105,g:140,b:95},{r:110,g:145,b:100},{r:100,g:135,b:90},{r:80,g:115,b:70},
-        {r:85,g:120,b:75},{r:110,g:145,b:100},{r:115,g:150,b:105},{r:105,g:140,b:95},{r:85,g:120,b:75},
-        {r:80,g:115,b:70},{r:100,g:135,b:90},{r:105,g:140,b:95},{r:95,g:130,b:85},{r:75,g:110,b:65},
-        {r:75,g:110,b:65},{r:80,g:115,b:70},{r:85,g:120,b:75},{r:75,g:110,b:65}
-    ],
-    "ToB": [
-        {r:145,g:30,b:30},{r:135,g:25,b:25},{r:150,g:35,b:35},{r:155,g:40,b:40},{r:125,g:20,b:20},
-        {r:105,g:20,b:20},{r:95,g:15,b:15},{r:90,g:10,b:10},{r:100,g:20,b:20},{r:115,g:25,b:25},
-        {r:130,g:35,b:35},{r:85,g:15,b:15},{r:60,g:10,b:10},{r:80,g:20,b:20},{r:110,g:30,b:30},
-        {r:120,g:30,b:30},{r:80,g:15,b:15},{r:70,g:10,b:10},{r:65,g:10,b:10},{r:95,g:25,b:25},
-        {r:100,g:25,b:25},{r:90,g:20,b:20},{r:75,g:15,b:15},{r:85,g:20,b:20}
-    ]
-};
-
 let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
 let originalImg = new Image();
@@ -78,7 +26,6 @@ function selectPuzzle(type, element) {
     }
     renderOverlayGrid();
 }
-// Attende in modo sicuro che tutto il DOM della pagina sia pronto prima di agganciare gli eventi
 document.addEventListener("DOMContentLoaded", function() {
     const fileInput = document.getElementById('file-input');
     if (!fileInput) return;
@@ -87,15 +34,24 @@ document.addEventListener("DOMContentLoaded", function() {
         const files = e.target.files;
         if (!files || files.length === 0 || !selectedPuzzleType) return;
 
-        logStatus("🎯 TRASCINA l'immagine per centrare il puzzle nel mirino arancione.", "#ffae00");
+        logStatus("🎯 TRASCINA la foto per centrare l'albero nel quadrato arancione.", "#ffae00");
 
         const img = new Image();
-        img.src = URL.createObjectURL(files[0]); // FIXED safe index pointer
+        img.src = URL.createObjectURL(files[0]);
         
         img.onload = function() {
-            const wrapper = document.getElementById('crop-area-wrapper');
-            if (!wrapper) return;
-            wrapper.innerHTML = ''; 
+            // Se esiste già un vecchio mirino, lo cancella per non duplicarlo
+            let wrapper = document.getElementById('crop-area-wrapper');
+            if (wrapper) wrapper.remove();
+
+            // CREAZIONE AUTOMATICA DEL CONTENITORE DIRETTAMENTE VIA CODICE
+            wrapper = document.createElement('div');
+            wrapper.id = 'crop-area-wrapper';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.width = '100%';
+            wrapper.style.marginTop = '15px';
 
             const viewport = document.createElement('div');
             viewport.style.position = 'relative';
@@ -114,6 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
             viewImg.style.cursor = 'move';
             viewImg.style.maxWidth = 'none';
 
+            // Adatta l'anteprima dello screenshot a una larghezza standard di controllo
             let initialWidth = 600; 
             let scaleFactor = initialWidth / img.naturalWidth;
             viewImg.style.width = `${initialWidth}px`;
@@ -122,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const cropBtn = document.createElement('button');
             cropBtn.innerText = "🎯 CONFERMA RITAGLIO E RISOLVI";
             cropBtn.style.width = '100%'; cropBtn.style.padding = '14px'; cropBtn.style.marginTop = '12px';
-            cropBtn.style.background = '#28a74 green'; cropBtn.style.background = '#28a745'; cropBtn.style.color = '#fff';
+            cropBtn.style.background = '#28a745'; cropBtn.style.color = '#fff';
             cropBtn.style.border = 'none'; cropBtn.style.fontWeight = 'bold'; cropBtn.style.borderRadius = '8px';
             cropBtn.style.cursor = 'pointer';
 
@@ -130,6 +87,10 @@ document.addEventListener("DOMContentLoaded", function() {
             wrapper.appendChild(viewport);
             wrapper.appendChild(cropBtn);
 
+            // Inserisce il mirino direttamente sotto la barra gialla dell'upload box
+            document.getElementById('upload-box').after(wrapper);
+
+            // Gestione del movimento dell'immagine (Drag & Touch sia su PC che iPad)
             let isDragging = false, startX, startY, posX = 0, posY = 0;
 
             const startDrag = (cx, cy) => { isDragging = true; startX = cx - posX; startY = cy - posY; };
@@ -156,7 +117,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 outCtx.drawImage(img, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
                 
-                wrapper.innerHTML = ''; 
+                wrapper.remove(); 
                 processSelectedPuzzle(outCanvas, outCtx);
             };
         };
@@ -165,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
-    if (!gridContainer) return; // FIXED null safety check
+    if (!gridContainer) return;
     
     gridContainer.innerHTML = ''; 
     gridContainer.style.display = 'grid';
@@ -195,8 +156,7 @@ function processSelectedPuzzle(canvas, ctx) {
     renderOverlayGrid();
 }
 function startSolving() {
-    calculatedSteps = []; 
-    currentStepIndex = 0;
+    calculatedSteps = []; currentStepIndex = 0;
     let state = [...currentLayout];
     let currentZero = state.indexOf(0);
     if (currentZero === -1) currentZero = 24;
@@ -218,8 +178,7 @@ function startSolving() {
         if (currentZero < 20) neighbors.push({ idx: currentZero + 5, dir: "▲" });
 
         if (neighbors.length > 0) {
-            let bestMove = neighbors; 
-            let minDistance = Infinity;
+            let bestMove = neighbors; let minDistance = Infinity;
             neighbors.forEach(n => {
                 let dist = Math.abs((n.idx % 5) - (misplacedIdx % 5)) + Math.abs(Math.floor(n.idx / 5) - Math.floor(misplacedIdx / 5));
                 if (dist < minDistance) { minDistance = dist; bestMove = n; }
@@ -249,10 +208,8 @@ if (typeof prevStep === 'undefined') {
 }
 
 function renderOverlayGrid() {
-    pipCtx.fillStyle = "rgba(20, 14, 9, 0.90)"; 
-    pipCtx.fillRect(0, 0, 300, 300);
-    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.3)"; 
-    pipCtx.lineWidth = 1;
+    pipCtx.fillStyle = "rgba(20, 14, 9, 0.90)"; pipCtx.fillRect(0, 0, 300, 300);
+    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.3)"; pipCtx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
         pipCtx.beginPath(); pipCtx.moveTo(i * 60, 0); pipCtx.lineTo(i * 60, 300); pipCtx.stroke();
         pipCtx.beginPath(); pipCtx.moveTo(0, i * 60); pipCtx.lineTo(300, i * 60); pipCtx.stroke();
@@ -266,20 +223,14 @@ function renderOverlayGrid() {
         let stepIdx = currentStepIndex + offset;
         if (stepIdx >= calculatedSteps.length) break;
         let moveData = calculatedSteps[stepIdx];
-        let gridIdx = moveData.gridIndex; 
-        let col = gridIdx % 5; 
-        let row = Math.floor(gridIdx / 5);
-        let tileCenterX = col * 60 + 30; 
-        let tileCenterY = row * 60 + 30;
+        let gridIdx = moveData.gridIndex; let col = gridIdx % 5; let row = Math.floor(gridIdx / 5);
+        let tileCenterX = col * 60 + 30; let tileCenterY = row * 60 + 30;
         pipCtx.fillStyle = opacityLevels[offset];
         pipCtx.font = offset === 0 ? "bold 34px sans-serif" : "24px sans-serif";
-        pipCtx.textAlign = "center"; 
-        pipCtx.textBaseline = "middle";
+        pipCtx.textAlign = "center"; pipCtx.textBaseline = "middle";
         pipCtx.fillText(moveData.direction, tileCenterX, tileCenterY);
         if (offset === 0) {
-            pipCtx.strokeStyle = "#28a745"; 
-            pipCtx.lineWidth = 4; 
-            pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
+            pipCtx.strokeStyle = "#28a745"; pipCtx.lineWidth = 4; pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
             document.getElementById('solution').innerHTML = `
                 <strong style='color:#ffae00; font-size:1.1rem;'>Mossa: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
                 <span style='font-size:1.1rem; color:#fff;'>Fai scorrere il tassello: <b>${moveData.direction}</b></span>
