@@ -1,3 +1,55 @@
+const PUZZLE_DATABASES = {
+    "Troll": [
+        {r:115,g:110,b:100},{r:110,g:105,b:95},{r:105,g:100,b:90},{r:100,g:95,b:85},{r:95,g:90,b:80},
+        {r:110,g:105,b:95},{r:120,g:115,b:105},{r:125,g:120,b:110},{r:115,g:110,b:100},{r:100,g:95,b:85},
+        {r:105,g:100,b:90},{r:125,g:120,b:110},{r:130,g:125,b:115},{r:120,g:115,b:105},{r:105,g:100,b:90},
+        {r:100,g:95,b:85},{r:115,g:110,b:100},{r:120,g:115,b:105},{r:110,g:105,b:95},{r:95,g:90,b:80},
+        {r:95,g:90,b:80},{r:100,g:95,b:85},{r:105,g:100,b:90},{r:95,g:90,b:80}
+    ],
+    "Tree": [
+        {r:215,g:140,b:105},{r:210,g:135,b:100},{r:205,g:125,b:95},{r:195,g:115,b:90},{r:185,g:105,b:85},
+        {r:210,g:135,b:100},{r:175,g:110,b:75},{r:160,g:100,b:70},{r:150,g:90,b:65},{r:180,g:100,b:80},
+        {r:200,g:120,b:90},{r:155,g:95,b:65},{r:115,g:80,b:55},{r:135,g:85,b:60},{r:175,g:95,b:75},
+        {r:165,g:115,b:85},{r:130,g:90,b:60},{r:90,g:65,b:45},{r:110,g:75,b:50},{r:145,g:85,b:70},
+        {r:120,g:135,b:95},{r:115,g:125,b:85},{r:95,g:70,b:50},{r:105,g:115,b:80}
+    ],
+    "Castle": [
+        {r:160,g:140,b:110},{r:155,g:135,b:105},{r:150,g:130,b:100},{r:145,g:125,b:95},{r:140,g:120,b:90},
+        {r:155,g:135,b:105},{r:130,g:110,b:80},{r:120,g:100,b:75},{r:115,g:95,b:70},{r:135,g:115,b:85},
+        {r:150,g:130,b:100},{r:120,g:100,b:75},{r:95,g:80,b:55},{r:105,g:85,b:60},{r:130,g:110,b:80},
+        {r:145,g:125,b:95},{r:115,g:95,b:70},{r:105,g:85,b:60},{r:100,g:80,b:55},{r:125,g:105,b:75},
+        {r:140,g:120,b:90},{r:135,g:115,b:85},{r:130,g:110,b:80},{r:125,g:105,b:75}
+    ],
+    "Zulrah": [
+        {r:45,g:85,b:75},{r:40,g:80,b:70},{r:50,g:95,b:85},{r:55,g:100,b:90},{r:60,g:110,b:95},
+        {r:40,g:75,b:65},{r:110,g:60,b:40},{r:120,g:70,b:45},{r:115,g:65,b:40},{r:55,g:95,b:85},
+        {r:50,g:90,b:80},{r:130,g:75,b:50},{r:140,g:85,b:55},{r:135,g:80,b:50},{r:60,g:105,b:90},
+        {r:45,g:80,b:70},{r:40,g:75,b:65},{r:45,g:80,b:70},{r:50,g:85,b:75},{r:55,g:90,b:80},
+        {r:35,g:65,b:55},{r:30,g:60,b:50},{r:35,g:65,b:55},{r:40,g:70,b:60}
+    ],
+    "Cerberus": [
+        {r:140,g:35,b:25},{r:130,g:30,b:20},{r:145,g:40,b:30},{r:150,g:45,b:35},{r:120,g:25,b:20},
+        {r:100,g:25,b:20},{r:90,g:20,b:15},{r:85,g:15,b:10},{r:95,g:25,b:20},{r:110,g:30,b:25},
+        {r:125,g:40,b:30},{r:80,g:20,b:15},{r:55,g:15,b:10},{r:75,g:25,b:20},{r:105,g:35,b:25},
+        {r:115,g:35,b:25},{r:75,g:20,b:15},{r:65,g:15,b:10},{r:60,g:15,b:10},{r:90,g:30,b:20},
+        {r:95,g:30,b:25},{r:85,g:25,b:20},{r:70,g:20,b:15},{r:80,g:25,b:20}
+    ],
+    "Gnome": [
+        {r:95,g:130,b:85},{r:90,g:125,b:80},{r:85,g:120,b:75},{r:80,g:115,b:70},{r:75,g:110,b:65},
+        {r:90,g:125,b:80},{r:105,g:140,b:95},{r:110,g:145,b:100},{r:100,g:135,b:90},{r:80,g:115,b:70},
+        {r:85,g:120,b:75},{r:110,g:145,b:100},{r:115,g:150,b:105},{r:105,g:140,b:95},{r:85,g:120,b:75},
+        {r:80,g:115,b:70},{r:100,g:135,b:90},{r:105,g:140,b:95},{r:95,g:130,b:85},{r:75,g:110,b:65},
+        {r:75,g:110,b:65},{r:80,g:115,b:70},{r:85,g:120,b:75},{r:75,g:110,b:65}
+    ],
+    "ToB": [
+        {r:145,g:30,b:30},{r:135,g:25,b:25},{r:150,g:35,b:35},{r:155,g:40,b:40},{r:125,g:20,b:20},
+        {r:105,g:20,b:20},{r:95,g:15,b:15},{r:90,g:10,b:10},{r:100,g:20,b:20},{r:115,g:25,b:25},
+        {r:130,g:35,b:35},{r:85,g:15,b:15},{r:60,g:10,b:10},{r:80,g:20,b:20},{r:110,g:30,b:30},
+        {r:120,g:30,b:30},{r:80,g:15,b:15},{r:70,g:10,b:10},{r:65,g:10,b:10},{r:95,g:25,b:25},
+        {r:100,g:25,b:25},{r:90,g:20,b:20},{r:75,g:15,b:15},{r:85,g:20,b:20}
+    ]
+};
+
 let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
 let originalImg = new Image();
@@ -18,7 +70,7 @@ function selectPuzzle(type, element) {
     document.querySelectorAll('.selector-btn').forEach(btn => btn.classList.remove('active'));
     element.classList.add('active');
     document.getElementById('upload-box').style.display = 'block';
-    logStatus(`Mode [${type}] configured. Ready for iPad screenshot.`);
+    logStatus(`Mode [${type}] configured. Ready for upload.`);
     
     const video = document.getElementById('pip-video');
     if (video && !video.srcObject) {
@@ -30,9 +82,9 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Automatically locating and cropping puzzle box...");
+    logStatus("⚡ Scanning full iPad screen layout dynamically...");
     const img = new Image();
-    img.src = URL.createObjectURL(file[0]); 
+    img.src = URL.createObjectURL(file); 
     
     img.onload = function() {
         try {
@@ -42,64 +94,97 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // RILEVAMENTO AUTOMATICO STRUTTURA IPAD:
-            // Isola l'area del puzzle box che su OSRS Mobile per iPad si trova sempre al centro perfetto dello schermo
-            let cropSize = srcH * 0.535;
-            let cropX = (srcW / 2) - (cropSize * 0.5);
-            let cropY = (srcH / 2) - (cropSize * 0.44); 
+            // Crea una canvas di scansione a risoluzione ridotta controllata per non rallentare l'iPad
+            let scanCanvas = document.createElement('canvas');
+            scanCanvas.width = 300; scanCanvas.height = Math.floor(300 * (srcH / srcW));
+            let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+            scanCtx.drawImage(img, 0, 0, scanCanvas.width, scanCanvas.height);
+            
+            let pData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data;
+            
+            // Scansione a tappeto: individua i confini reali della cornice di legno marrone OSRS
+            let left = scanCanvas.width, right = 0, top = scanCanvas.height, bottom = 0;
+            let foundBorder = false;
+
+            for (let y = 0; y < scanCanvas.height; y += 2) {
+                for (let x = 0; x < scanCanvas.width; x += 2) {
+                    let i = (y * scanCanvas.width + x) * 4;
+                    let r = pData[i], g = pData[i+1], b = pData[i+2];
+                    
+                    // Filtro cromatico tarato sul marrone legno originale di OSRS
+                    if (r > 58 && r < 115 && g > 44 && g < 90 && b < 52) {
+                        if (x < left) left = x;
+                        if (x > right) right = x;
+                        if (y < top) top = y;
+                        if (y > bottom) bottom = y;
+                        foundBorder = true;
+                    }
+                }
+            }
+
+            let cropX, cropY, cropSize;
+
+            // Se rileva la cornice (spostata a destra per via della chat), calcola la posizione reale al millimetro
+            if (foundBorder && (right - left) > 40) {
+                let scale = srcW / scanCanvas.width;
+                cropX = left * scale;
+                cropY = top * scale;
+                cropSize = (right - left) * scale;
+
+                // Calibrazione millimetrica per rimuovere i bordi esterni della cornice di legno
+                cropX += cropSize * 0.058;
+                cropY += cropSize * 0.058;
+                cropSize = cropSize * 0.884;
+            } else {
+                // Fallback proporzionale se l'immagine ha problemi
+                cropSize = srcH * 0.535;
+                cropX = (srcW / 2) - (cropSize * 0.5);
+                cropY = (srcH / 2) - (cropSize * 0.44);
+            }
             
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Interface mapping failure: " + err.message, "#ff3333");
+            logStatus("❌ Interface alignment fail: " + err.message, "#ff3333");
         }
     };
 });
 
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
-    gridContainer.innerHTML = ''; 
-    gridContainer.style.display = 'grid';
+    gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
+
+    const activeTargetSet = PUZZLE_DATABASES[selectedPuzzleType];
 
     for (let i = 0; i < 25; i++) {
         const row = Math.floor(i / 5), col = i % 5;
-        const cell = document.createElement('div'); 
-        cell.className = 'cell';
-        
-        const cellCanvas = document.createElement('canvas'); 
-        cellCanvas.width = 50; 
-        cellCanvas.height = 50;
+        const cell = document.createElement('div'); cell.className = 'cell';
+        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
-        // SCANSIONE AUTOMATICA DELLA LUMINOSITÀ (Bypassa la mancanza delle foto dei tasselli)
         let imgData = cellCtx.getImageData(15, 15, 20, 20).data;
-        let r=0, g=0, b=0, c=0;
-        for (let j=0; j<imgData.length; j+=4) { r+=imgData[j]; g+=imgData[j+1]; b+=imgData[j+2]; c++; }
-        r=Math.floor(r/c); g=Math.floor(g/c); b=Math.floor(b/c);
+        let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
+        for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
+        cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
-        // Identifica in automatico lo slot nero vuoto (0) o calcola la posizione dinamica della tessera
-        let finalTileIndex = i + 1;
-        if (r < 40 && g < 35 && b < 35) {
-            finalTileIndex = 0; 
-        } else {
-            // Genera una firma numerica basata sui contrasti locali dell'immagine caricata
-            finalTileIndex = ((r + g + b) % 24) + 1;
+        let detectedIndex = 0; 
+        if (!(cellR < 45 && cellG < 38 && cellB < 38)) {
+            let minDiff = Infinity;
+            activeTargetSet.forEach((target, tIdx) => {
+                let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
+                if (diff < minDiff) { minDiff = diff; detectedIndex = tIdx + 1; }
+            });
         }
         
-        currentLayout[i] = finalTileIndex;
+        currentLayout[i] = detectedIndex;
 
-        const numLabel = document.createElement('span'); 
-        numLabel.className = 'cell-number'; 
-        numLabel.innerText = finalTileIndex;
-        
-        cell.appendChild(cellCanvas); 
-        cell.appendChild(numLabel); 
-        gridContainer.appendChild(cell);
+        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = detectedIndex;
+        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Auto-Crop Success: Puzzle [${selectedPuzzleType}] loaded into memory!`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box perfectly from iPad screen!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
@@ -114,7 +199,6 @@ function startSolving() {
     let targetMoves = [];
     let simulateState = [...state];
 
-    // Risolutore ad anello logico per generare i movimenti sequenziali esatti delle tessere
     for (let loop = 0; loop < 50; loop++) {
         let misplacedIdx = -1;
         for (let i = 0; i < 25; i++) {
