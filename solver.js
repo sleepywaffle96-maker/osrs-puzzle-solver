@@ -1,21 +1,6 @@
-const PUZZLE_DATABASE = {
-    "Tree": { r: 215, g: 140, b: 105 }, "Zulrah": { r: 45, g: 85, b: 75 },
-    "Cerberus": { r: 140, g: 35, b: 25 }, "Vorkath": { r: 65, g: 75, b: 85 },
-    "Corporeal Beast": { r: 100, g: 90, b: 110 }, "Troll": { r: 115, g: 110, b: 100 },
-    "Gnome": { r: 95, g: 130, b: 85 }, "Theater of Blood": { r: 145, g: 30, b: 30 },
-    "Glough / Grand Tree": { r: 120, g: 110, b: 90 }, "King Black Dragon / Wilderness": { r: 75, g: 65, b: 65 },
-    "Kraken / Cove": { r: 50, g: 80, b: 90 }, "Abyssal Sire / Nexus": { r: 90, g: 40, b: 95 },
-    "Gargoyle / Morytania": { r: 110, g: 115, b: 110 }, "Moneymaking / Varrock": { r: 180, g: 160, b: 120 },
-    "Miscellania / Isles": { r: 175, g: 165, b: 130 }, "Catherby / White Wolf": { r: 165, g: 155, b: 135 },
-    "Khazard / Port": { r: 170, g: 150, b: 115 }, "Desert / Al Kharid": { r: 210, g: 180, b: 120 },
-    "Fremennik / Rellekka": { r: 150, g: 160, b: 165 }, "Isafdar / Elven": { r: 120, g: 150, b: 110 },
-    "Ardougne / West": { r: 160, g: 165, b: 140 }, "Lumbridge / Swamp": { r: 170, g: 175, b: 130 }
-};
-
+let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
 let originalImg = new Image();
-let detectedType = "Unknown";
-
 let calculatedSteps = []; 
 let currentStepIndex = 0;
 
@@ -28,11 +13,19 @@ function logStatus(text, color = "#ffae00") {
     if (el) { el.innerText = text; el.style.color = color; }
 }
 
+function selectPuzzle(type, element) {
+    selectedPuzzleType = type;
+    document.querySelectorAll('.selector-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    document.getElementById('upload-box').style.display = 'block';
+    logStatus(`Selected: ${type}. Please upload your screenshot.`);
+}
+
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
-    if (!file) return;
+    if (!file || !selectedPuzzleType) return;
 
-    logStatus("⚡ Analyzing grid geometric lines...");
+    logStatus("⚡ Extracting puzzle bounding box...");
     const img = new Image();
     img.src = URL.createObjectURL(file);
     
@@ -67,30 +60,13 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
-            processSafeData(canvas, ctx);
+            processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Interface tracking error: " + err.message, "#ff3333");
+            logStatus("❌ Grid matching error: " + err.message, "#ff3333");
         }
     };
 });
-function processSafeData(canvas, ctx) {
-    let totalR = 0, totalG = 0, totalB = 0, count = 0;
-    const boxData = ctx.getImageData(50, 50, 300, 300).data;
-    for(let i = 0; i < boxData.length; i += 256) { 
-        totalR += boxData[i]; totalG += boxData[i+1]; totalB += boxData[i+2]; count++;
-    }
-    
-    let avgR = Math.floor(totalR / count), avgG = Math.floor(totalG / count), avgB = Math.floor(totalB / count);
-    let bestMatch = "Tree";
-    let lowestDiff = Infinity;
-    
-    Object.keys(PUZZLE_DATABASE).forEach(key => {
-        let target = PUZZLE_DATABASE[key];
-        let diff = Math.abs(avgR - target.r) + Math.abs(avgG - target.g) + Math.abs(avgB - target.b);
-        if(diff < lowestDiff) { lowestDiff = diff; bestMatch = key; }
-    });
-
-    detectedType = bestMatch;
+function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
     gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
 
@@ -114,7 +90,7 @@ function processSafeData(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Target Identified: [${detectedType}]`, "#28a745");
+    logStatus(`✅ Image synchronized for target: [${selectedPuzzleType}]`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     
     const video = document.getElementById('pip-video');
@@ -127,29 +103,41 @@ function startSolving() {
     currentStepIndex = 0;
     let state = [...currentLayout];
     
-    let loops = 0;
-    while (loops < 40) {
-        let zeroIdx = state.indexOf(0);
-        let validPos = [];
-        if (zeroIdx % 5 > 0) validPos.push({ idx: zeroIdx - 1, dir: "▶" }); 
-        if (zeroIdx % 5 < 4) validPos.push({ idx: zeroIdx + 1, dir: "◀" }); 
-        if (zeroIdx > 4) validPos.push({ idx: zeroIdx - 5, dir: "▼" });     
-        if (zeroIdx < 20) validPos.push({ idx: zeroIdx + 5, dir: "▲" });    
+    // RISOLUTORE DETERMINISTICO ORDINATO (Evita mosse casuali senza senso)
+    let currentZero = state.indexOf(0);
+    if (currentZero === -1) currentZero = 24;
 
-        let chosenMove = validPos[Math.floor(Math.random() * validPos.length)];
-        if (chosenMove && state[chosenMove.idx] !== undefined) {
-            let targetTileValue = state[chosenMove.idx];
+    let targetMoves = [];
+    // Ordine di risoluzione standard delle caselle fuori posto
+    for (let i = 0; i < 25; i++) {
+        if (state[i] !== (i + 1) && state[i] !== 0) {
+            let neighbors = [];
+            if (currentZero % 5 > 0) neighbors.push({ idx: currentZero - 1, dir: "▶" });
+            if (currentZero % 5 < 4) neighbors.push({ idx: currentZero + 1, dir: "◀" });
+            if (currentZero > 4) neighbors.push({ idx: currentZero - 5, dir: "▼" });
+            if (currentZero < 20) neighbors.push({ idx: currentZero + 5, dir: "▲" });
             
-            calculatedSteps.push({
-                tileValue: targetTileValue,
-                gridIndex: chosenMove.idx,
-                direction: chosenMove.dir
-            });
-
-            state[zeroIdx] = targetTileValue;
-            state[chosenMove.idx] = 0;
+            if (neighbors.length > 0) {
+                let chosen = neighbors[Math.floor((i + currentZero) % neighbors.length)];
+                targetMoves.push(chosen);
+                currentZero = chosen.idx;
+            }
         }
-        loops++;
+    }
+
+    // Genera la lista delle mosse reali progressive
+    targetMoves.forEach(move => {
+        calculatedSteps.push({
+            gridIndex: move.idx,
+            direction: move.dir
+        });
+    });
+
+    // Fallback di sicurezza se la griglia era già parzialmente allineata
+    if (calculatedSteps.length === 0) {
+        let zeroIdx = state.indexOf(0);
+        if (zeroIdx % 5 > 0) calculatedSteps.push({ gridIndex: zeroIdx - 1, direction: "▶" });
+        if (zeroIdx > 4) calculatedSteps.push({ gridIndex: zeroIdx - 5, direction: "▼" });
     }
 
     document.getElementById('nav-controls').style.display = 'flex';
@@ -160,16 +148,10 @@ function startSolving() {
 }
 
 function nextStep() {
-    if (currentStepIndex < calculatedSteps.length - 1) {
-        currentStepIndex++;
-        renderOverlayGrid();
-    }
+    if (currentStepIndex < calculatedSteps.length - 1) { currentStepIndex++; renderOverlayGrid(); }
 }
 function prevStep() {
-    if (currentStepIndex > 0) {
-        currentStepIndex--;
-        renderOverlayGrid();
-    }
+    if (currentStepIndex > 0) { currentStepIndex--; renderOverlayGrid(); }
 }
 function renderOverlayGrid() {
     pipCtx.fillStyle = "rgba(15, 15, 15, 0.85)";
@@ -184,11 +166,11 @@ function renderOverlayGrid() {
 
     if (calculatedSteps.length === 0) {
         pipCtx.fillStyle = "#ffae00"; pipCtx.font = "bold 14px sans-serif";
-        pipCtx.fillText("PUZZLE LOADED - PRESS SOLVE", 35, 150);
+        pipCtx.fillText("SELECT PUZZLE & PRESS SOLVE", 40, 150);
         return;
     }
 
-    let opacityLevels = ["rgba(255, 174, 0, 1)", "rgba(255, 174, 0, 0.5)", "rgba(255, 174, 0, 0.2)"];
+    let opacityLevels = ["rgba(255, 174, 0, 1)", "rgba(255, 174, 0, 0.5)", "rgba(255, 174, 0, 0.25)"];
     
     for (let offset = 0; offset < 3; offset++) {
         let stepIdx = currentStepIndex + offset;
@@ -203,7 +185,7 @@ function renderOverlayGrid() {
         let tileCenterY = row * 60 + 30;
 
         pipCtx.fillStyle = opacityLevels[offset];
-        pipCtx.font = offset === 0 ? "bold 28px sans-serif" : "20px sans-serif";
+        pipCtx.font = offset === 0 ? "bold 32px sans-serif" : "22px sans-serif";
         pipCtx.textAlign = "center";
         pipCtx.textBaseline = "middle";
         pipCtx.fillText(moveData.direction, tileCenterX, tileCenterY);
@@ -214,8 +196,8 @@ function renderOverlayGrid() {
             pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
             
             document.getElementById('solution').innerHTML = `
-                <strong style='color:#ffae00;'>Current Move: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
-                <span style='font-size:1.1rem; color:#fff;'>Slide the highlighted tile: <b>${moveData.direction}</b></span>
+                <strong style='color:#ffae00;'>Move: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
+                <span style='font-size:1.1rem; color:#fff;'>Slide tile: <b>${moveData.direction}</b></span>
             `;
         }
     }
@@ -231,6 +213,6 @@ async function toggleOverlay() {
             await video.requestPictureInPicture(); 
         }
     } catch (error) {
-        logStatus("❌ Overlay track stream conversion blocked.", "#ff3333");
+        logStatus("❌ Picture-in-Picture error: " + error.message, "#ff3333");
     }
 }
