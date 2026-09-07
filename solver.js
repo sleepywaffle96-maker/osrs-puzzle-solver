@@ -52,12 +52,14 @@ const PUZZLE_DATABASES = {
 
 let selectedPuzzleType = "";
 let currentLayout = Array(25).fill(0);
+let originalImg = new Image();
 let calculatedSteps = []; 
 let currentStepIndex = 0;
 
+// Forza l'attributo di lettura frequente sulla canvas dell'overlay PiP
 const pipCanvas = document.createElement('canvas');
 pipCanvas.width = 300; pipCanvas.height = 300; 
-const pipCtx = pipCanvas.getContext('2d');
+const pipCtx = pipCanvas.getContext('2d', { willReadFrequently: true });
 
 function logStatus(text, color = "#ffae00") {
     const el = document.getElementById('status');
@@ -81,45 +83,43 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Scanning full screen at native resolution...");
+    logStatus("⚡ High-accuracy native scan running...");
     const img = new Image();
-    img.src = URL.createObjectURL(file[0]); // Correzione array file blob
+    img.src = URL.createObjectURL(file[0]); 
     
     img.onload = function() {
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 400; canvas.height = 400;
-            const ctx = canvas.getContext('2d');
+            // Configurazione canva protetta per azzerare l'avviso dei DevTools
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // Creazione canvas HD ad alta fedeltà per non perdere le coordinate del client
             let scanCanvas = document.createElement('canvas');
             scanCanvas.width = srcW; scanCanvas.height = srcH;
-            let scanCtx = scanCanvas.getContext('2d');
+            let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
             scanCtx.drawImage(img, 0, 0);
             
-            // Campionamento selettivo: analizza una colonna e riga centrale per trovare la cornice
             let minX = srcW, maxX = 0, minY = srcH, maxY = 0;
             let foundBox = false;
 
-            // Scansione a intervalli ottimizzati per mantenere la velocità istantanea su mobile
-            let stepX = Math.floor(srcW / 300) || 1;
-            let stepY = Math.floor(srcH / 300) || 1;
+            // Scansione pixel per rintracciare la finestra di RuneLite posizionata a destra dello schermo intero
+            let stepX = Math.floor(srcW / 400) || 1;
+            let stepY = Math.floor(srcH / 400) || 1;
 
-            // Campiona solo la porzione destra dello schermo (dove tieni agganciato RuneLite)
-            let startX = Math.floor(srcW * 0.3); 
-            let endX = Math.floor(srcW * 0.95);
-            let startY = Math.floor(srcH * 0.1);
-            let endY = Math.floor(srcH * 0.9);
+            let startX = Math.floor(srcW * 0.35); 
+            let endX = Math.floor(srcW * 0.98);
+            let startY = Math.floor(srcH * 0.05);
+            let endY = Math.floor(srcH * 0.85);
 
             for (let y = startY; y < endY; y += stepY) {
                 let rowData = scanCtx.getImageData(startX, y, endX - startX, 1).data;
                 for (let x = 0; x < rowData.length; x += 4 * stepX) {
                     let r = rowData[x], g = rowData[x+1], b = rowData[x+2];
                     
-                    // Firma esatta del legno marrone delle cornici OSRS
-                    if (r > 52 && r < 118 && g > 42 && g < 92 && b < 60) {
+                    // SOGLIA AD ALTA TOLLERANZA: Estesa per intercettare il marrone della cornice anche se compresso
+                    if (r > 38 && r < 135 && g > 28 && g < 105 && b < 72) {
                         let realX = startX + (x / 4);
                         if (realX < minX) minX = realX;
                         if (realX > maxX) maxX = realX;
@@ -132,17 +132,18 @@ document.getElementById('file-input').addEventListener('change', function(e) {
 
             let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
 
-            if (foundBox && (maxX - minX) > srcW * 0.1) {
+            // Se la scansione ad ampio spettro trova la cornice di RuneLite, taglia via il desktop di Windows
+            if (foundBox && (maxX - minX) > srcW * 0.08) {
                 cropX = minX;
                 cropY = minY;
                 cropSize = maxX - minX;
                 
-                // Normalizzazione geometrica proporzionale 1:1 escludendo lo spessore esterno
-                cropX += cropSize * 0.045;
-                cropY += cropSize * 0.045;
-                cropSize = cropSize * 0.91;
+                // Centratura millimetrica sui 25 tasselli di gioco
+                cropX += cropSize * 0.052;
+                cropY += cropSize * 0.052;
+                cropSize = cropSize * 0.896;
             } else {
-                // Fallback standard proporzionale
+                // Fallback di centraggio standard se la foto fosse già parzialmente ritagliata
                 if (srcW > srcH) {
                     cropX = (srcW - srcH) / 2; cropSize = srcH;
                 } else {
@@ -150,12 +151,11 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 }
             }
             
-            // Ritaglia millimetricamente solo la matrice dei 25 tasselli
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Auto-Detection processing error: " + err.message, "#ff3333");
+            logStatus("❌ Geometry conversion crash: " + err.message, "#ff3333");
         }
     };
 });
@@ -170,7 +170,7 @@ function processSelectedPuzzle(canvas, ctx) {
         const row = Math.floor(i / 5), col = i % 5;
         const cell = document.createElement('div'); cell.className = 'cell';
         const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
-        const cellCtx = cellCanvas.getContext('2d');
+        const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
         let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
@@ -193,7 +193,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box from monitor screenshot!`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] box from screen layout!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
