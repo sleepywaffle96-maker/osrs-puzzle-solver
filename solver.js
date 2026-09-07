@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const files = e.target.files;
         if (!files || files.length === 0 || !selectedPuzzleType) return;
 
-        logStatus("🔍 Zoom con due dita / rotellina e TRASCINA per inquadrare il puzzle box.", "#ffae00");
+        logStatus("🖱️ CLICCA e TRASCINA direttamente sulla foto per selezionare il riquadro del puzzle.", "#ffae00");
 
         const img = new Image();
         img.src = URL.createObjectURL(files[0]);
@@ -50,118 +50,105 @@ document.addEventListener("DOMContentLoaded", function() {
             wrapper.style.width = '100%';
             wrapper.style.marginTop = '15px';
 
-            const viewport = document.createElement('div');
-            viewport.style.position = 'relative';
-            viewport.style.width = '300px';
-            viewport.style.height = '300px';
-            viewport.style.overflow = 'hidden';
-            viewport.style.border = '4px solid #ffae00';
-            viewport.style.borderRadius = '12px';
-            viewport.style.background = '#111';
-            viewport.style.touchAction = 'none'; // Previene il caricamento della pagina durante il pinch zoom
+            // Canvas interattiva su cui l'utente disegna la selezione
+            const selectCanvas = document.createElement('canvas');
+            selectCanvas.style.maxWidth = '100%';
+            selectCanvas.style.width = '360px';
+            selectCanvas.style.border = '2px solid #543f32';
+            selectCanvas.style.borderRadius = '8px';
+            selectCanvas.style.cursor = 'crosshair';
+            selectCanvas.style.touchAction = 'none';
 
-            const viewImg = document.createElement('img');
-            viewImg.src = img.src;
-            viewImg.style.position = 'absolute';
-            viewImg.style.top = '0px';
-            viewImg.style.left = '0px';
-            viewImg.style.cursor = 'move';
-            viewImg.style.maxWidth = 'none';
-            viewImg.style.transformOrigin = '0 0';
-
-            // Impostazioni iniziali di scala fluida adattiva
-            let baseWidth = 320;
-            let currentScale = baseWidth / img.naturalWidth;
-            let posX = 0, posY = 0;
-            
-            function updateTransform() {
-                viewImg.style.width = `${img.naturalWidth * currentScale}px`;
-                viewImg.style.height = `${img.naturalHeight * currentScale}px`;
-                viewImg.style.left = `${posX}px`;
-                viewImg.style.top = `${posY}px`;
-            }
-            updateTransform();
+            // Adatta la canvas alla risoluzione reale dello screenshot
+            selectCanvas.width = img.naturalWidth;
+            selectCanvas.height = img.naturalHeight;
+            const sCtx = selectCanvas.getContext('2d');
+            sCtx.drawImage(img, 0, 0);
 
             const cropBtn = document.createElement('button');
-            cropBtn.innerText = "🎯 CONFERMA RITAGLIO E RISOLVI";
+            cropBtn.innerText = "🎯 CALCOLA SOLUZIONE AREA SELEZIONATA";
             cropBtn.style.width = '100%'; cropBtn.style.padding = '14px'; cropBtn.style.marginTop = '12px';
             cropBtn.style.background = '#28a745'; cropBtn.style.color = '#fff';
             cropBtn.style.border = 'none'; cropBtn.style.fontWeight = 'bold'; cropBtn.style.borderRadius = '8px';
             cropBtn.style.cursor = 'pointer';
 
-            viewport.appendChild(viewImg);
-            wrapper.appendChild(viewport);
+            wrapper.appendChild(selectCanvas);
             wrapper.appendChild(cropBtn);
             document.getElementById('upload-box').after(wrapper);
 
-            // GESTIONE TRASCINAMENTO E PINCH ZOOM (Mouse + Touchscreen)
-            let isDragging = false, startX, startY;
-            let lastTouchDist = 0;
+            // Logica del tracciamento del rettangolo (Mouse e Touch)
+            let isDrawing = false;
+            let startX = 0, startY = 0, endX = 0, endY = 0;
 
-            // Zoom con rotellina del mouse (Desktop)
-            viewport.addEventListener('wheel', function(e) {
-                e.preventDefault();
-                let zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-                currentScale = Math.max(0.1, Math.min(currentScale * zoomFactor, 4));
-                updateTransform();
-            }, { passive: false });
+            function getCoords(evt) {
+                const rect = selectCanvas.getBoundingClientRect();
+                const scaleX = selectCanvas.width / rect.width;
+                const scaleY = selectCanvas.height / rect.height;
+                
+                let clientX = evt.clientX || (evt.touches && evt.touches[0].clientX);
+                let clientY = evt.clientY || (evt.touches && evt.touches[0].clientY);
 
-            // Inizio tocco/click
-            const onStart = (cx, cy) => { isDragging = true; startX = cx - posX; startY = cy - posY; };
-            
-            // Movimento tocco/click
-            const onMove = (cx, cy) => { 
-                if (!isDragging) return; 
-                posX = cx - startX; 
-                posY = cy - startY; 
-                updateTransform(); 
-            };
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
 
-            viewport.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
-            window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-            window.addEventListener('mouseup', () => { isDragging = false; });
+            function dragStart(e) {
+                isDrawing = true;
+                const coords = getCoords(e);
+                startX = coords.x;
+                startY = coords.y;
+                endX = coords.x;
+                endY = coords.y;
+            }
 
-            // Gestione eventi Touch completi per iPad (Pinch to Zoom con due dita)
-            viewport.addEventListener('touchstart', function(e) {
-                if (e.touches.length === 1) {
-                    onStart(e.touches[0].clientX, e.touches[0].clientY);
-                } else if (e.touches.length === 2) {
-                    isDragging = false;
-                    lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                }
-            });
+            function dragMove(e) {
+                if (!isDrawing) return;
+                const coords = getCoords(e);
+                endX = coords.x;
+                endY = coords.y;
 
-            viewport.addEventListener('touchmove', function(e) {
-                if (e.touches.length === 1) {
-                    onMove(e.touches[0].clientX, e.touches[0].clientY);
-                } else if (e.touches.length === 2) {
-                    let dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                    let factor = dist / lastTouchDist;
-                    currentScale = Math.max(0.1, Math.min(currentScale * factor, 4));
-                    lastTouchDist = dist;
-                    updateTransform();
-                }
-            });
+                // Ridisegna l'immagine pulita ed applica il rettangolo dorato semitrasparente in tempo reale
+                sCtx.clearRect(0, 0, selectCanvas.width, selectCanvas.height);
+                sCtx.drawImage(img, 0, 0);
+                sCtx.strokeStyle = "#ffae00";
+                sCtx.lineWidth = Math.max(3, selectCanvas.width * 0.005);
+                sCtx.fillStyle = "rgba(255, 174, 0, 0.15)";
+                sCtx.fillRect(startX, startY, endX - startX, endY - startY);
+                sCtx.strokeRect(startX, startY, endX - startX, endY - startY);
+            }
 
-            viewport.addEventListener('touchend', () => { isDragging = false; lastTouchDist = 0; });
+            selectCanvas.addEventListener('mousedown', dragStart);
+            window.addEventListener('mousemove', dragMove);
+            window.addEventListener('mouseup', () => { isDrawing = false; });
+
+            selectCanvas.addEventListener('touchstart', dragStart);
+            window.addEventListener('touchmove', dragMove);
+            window.addEventListener('touchend', () => { isDrawing = false; });
 
             cropBtn.onclick = function() {
                 const outCanvas = document.createElement('canvas');
                 outCanvas.width = 400; outCanvas.height = 400;
                 const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
 
-                // Conversione matematica esatta tra lo zoom della maschera e la risoluzione nativa del file
-                let natScale = 1 / currentScale;
-                let finalX = -posX * natScale;
-                let finalY = -posY * natScale;
-                let finalSize = 300 * natScale;
+                let x = Math.min(startX, endX);
+                let y = Math.min(startY, endY);
+                let w = Math.abs(endX - startX);
+                let h = Math.abs(endY - startY);
 
-                outCtx.drawImage(img, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
+                if (w < 20 || h < 20) {
+                    logStatus("❌ Area troppo piccola! Trascina un rettangolo più grande sopra il puzzle.", "#ff3333");
+                    return;
+                }
+
+                // Ritaglia esattamente la porzione che hai disegnato con il mouse/dito
+                outCtx.drawImage(img, x, y, w, h, 0, 0, 400, 400);
                 wrapper.remove(); 
                 processSelectedPuzzle(outCanvas, outCtx);
             };
         };
-    });
+    };
 });
 
 function processSelectedPuzzle(canvas, ctx) {
@@ -191,7 +178,7 @@ function processSelectedPuzzle(canvas, ctx) {
         const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = finalTileIndex;
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
-    logStatus("✅ Ritaglio confermato e ordinato!", "#28a745");
+    logStatus("✅ Selezione allineata alla griglia con successo!", "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
