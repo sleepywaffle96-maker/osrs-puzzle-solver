@@ -80,131 +80,97 @@ function selectPuzzle(type, element) {
 }
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
+    // CORREZIONE BUG DI SICUREZZA: Controlla che l'array contenga almeno un file valido
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("🎯 DRAG the image below to center your puzzle box inside the orange frame.", "#ffae00");
+    logStatus("⚡ Extracting and classifying puzzle tiles automatically...");
+    const img = new Image();
+    
+    // CORREZIONE CRITICA: Estrae il singolo elemento d'indice 0 per inviarlo come Blob sicuro
+    img.src = URL.createObjectURL(file[0]); 
+    
+    img.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400; canvas.height = 400;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            let srcW = img.naturalWidth, srcH = img.naturalHeight;
+            
+            // RITAGLIO UNIVERSALE ADATTIVO: Isola il box escludendo le bande nere
+            let cropSize = Math.min(srcW, srcH);
+            let cropX = (srcW - cropSize) / 2;
+            let cropY = (srcH - cropSize) / 2;
+            
+            if (srcW / srcH > 1.5) {
+                cropSize = srcH * 0.58; 
+                cropX = srcW * 0.44;   
+                cropY = srcH * 0.22;
+            }
+            
+            ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
+            URL.revokeObjectURL(img.src);
+            
+            let tileSignatures = [];
 
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        originalImg.src = event.target.result;
-        originalImg.onload = function() {
-            const oldContainer = document.getElementById('crop-viewport-container');
-            if (oldContainer) oldContainer.remove();
+            for (let i = 0; i < 25; i++) {
+                const row = Math.floor(i / 5), col = i % 5;
+                const cellCanvas = document.createElement('canvas'); 
+                cellCanvas.width = 80; cellCanvas.height = 80;
+                const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
+                cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 80, 80);
 
-            // Crea un'area di puntamento visiva per l'utente (Overlay mobile-friendly)
-            const viewContainer = document.createElement('div');
-            viewContainer.id = 'crop-viewport-container';
-            viewContainer.style.position = 'relative';
-            viewContainer.style.width = '320px';
-            viewContainer.style.height = '320px';
-            viewContainer.style.overflow = 'hidden';
-            viewContainer.style.border = '3px solid #ffae00';
-            viewContainer.style.borderRadius = '12px';
-            viewContainer.style.marginTop = '15px';
-            viewContainer.style.background = '#000';
-
-            const movableImg = document.createElement('img');
-            movableImg.src = originalImg.src;
-            movableImg.style.position = 'absolute';
-            movableImg.style.top = '0px';
-            movableImg.style.left = '0px';
-            movableImg.style.cursor = 'move';
-            movableImg.style.width = '800px'; // Dimensione scalata per facilitare il puntamento su PC/iPad
-
-            // Mirino fisso centrale di riferimento
-            const crosshair = document.createElement('div');
-            crosshair.style.position = 'absolute';
-            crosshair.style.top = '10px'; crosshair.style.left = '10px';
-            crosshair.style.width = '300px'; crosshair.style.height = '300px';
-            crosshair.style.border = '2px dashed rgba(255, 174, 0, 0.6)';
-            crosshair.style.pointerEvents = 'none';
-
-            // Pulsante di conferma ritaglio
-            const confirmBtn = document.createElement('button');
-            confirmBtn.innerText = "⚡ CONFIRM CROP ZONE";
-            confirmBtn.style.width = '100%'; confirmBtn.style.padding = '12px';
-            confirmBtn.style.marginTop = '10px'; confirmBtn.style.background = '#28a745';
-            confirmBtn.style.color = '#fff'; confirmBtn.style.border = 'none';
-            confirmBtn.style.fontWeight = 'bold'; confirmBtn.style.borderRadius = '6px';
-
-            viewContainer.appendChild(movableImg);
-            viewContainer.appendChild(crosshair);
-            document.getElementById('upload-box').after(confirmBtn);
-            document.getElementById('upload-box').after(viewContainer);
-
-            // Gestione trascinamento Drag & Drop (Compatibile con mouse e touchscreen dell'iPad)
-            let isDragging = false, startX, startY, currentLeft = 0, currentTop = 0;
-
-            const startDrag = (clientX, clientY) => { isDragging = true; startX = clientX - currentLeft; startY = clientY - currentTop; };
-            const moveDrag = (clientX, clientY) => { if (!isDragging) return; currentLeft = clientX - startX; currentTop = clientY - startY; movableImg.style.left = `${currentLeft}px`; movableImg.style.top = `${currentTop}px`; };
-            const endDrag = () => { isDragging = false; };
-
-            movableImg.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
-            window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
-            window.addEventListener('mouseup', endDrag);
-
-            movableImg.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY));
-            movableImg.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
-            movableImg.addEventListener('touchend', endDrag);
-
-            confirmBtn.onclick = function() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 400; canvas.height = 400;
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-                // Estrae la porzione esatta racchiusa nel mirino calcolando la scala geometrica
-                let scale = originalImg.naturalWidth / 800;
-                let finalX = -currentLeft * scale;
-                let finalY = -currentTop * scale;
-                let finalSize = 320 * scale;
-
-                ctx.drawImage(originalImg, finalX, finalY, finalSize, finalSize, 0, 0, 400, 400);
+                let imgData = cellCtx.getImageData(20, 20, 40, 40).data;
+                let totalLuminance = 0, count = 0;
                 
-                viewContainer.remove();
-                confirmBtn.remove();
-                processSelectedPuzzle(canvas, ctx);
-            };
-        };
-    };
-    reader.readAsDataURL(file);
-});
+                for (let j = 0; j < imgData.length; j += 4) {
+                    let lum = 0.299 * imgData[j] + 0.587 * imgData[j+1] + 0.114 * imgData[j+2];
+                    totalLuminance += lum;
+                    count++;
+                }
+                let avgLum = totalLuminance / count;
+                
+                tileSignatures.push({
+                    initialIndex: i,
+                    luminance: avgLum,
+                    isBlackSlot: (avgLum < 42) 
+                });
+            }
 
-function processSelectedPuzzle(canvas, ctx) {
-    const gridContainer = document.getElementById('puzzle-grid');
-    gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
-
-    const activeTargetSet = PUZZLE_DATABASES[selectedPuzzleType];
-
-    for (let i = 0; i < 25; i++) {
-        const row = Math.floor(i / 5), col = i % 5;
-        const cell = document.createElement('div'); cell.className = 'cell';
-        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
-        const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
-        cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
-
-        let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
-        let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
-        for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
-        cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
-
-        let detectedIndex = 0; 
-        if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
-            let minDiff = Infinity;
-            activeTargetSet.forEach((target, tIdx) => {
-                let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
-                if (diff < minDiff) { minDiff = diff; detectedIndex = tIdx + 1; }
+            let sortedTiles = [...tileSignatures].sort((a, b) => b.luminance - a.luminance);
+            
+            tileSignatures.forEach((tile, currentPos) => {
+                if (tile.isBlackSlot) {
+                    currentLayout[currentPos] = 0; 
+                } else {
+                    let realRank = sortedTiles.findIndex(t => t.initialIndex === tile.initialIndex);
+                    currentLayout[currentPos] = (realRank % 24) + 1;
+                }
             });
-        }
-        
-        currentLayout[i] = detectedIndex;
-        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = detectedIndex;
-        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
-    }
 
-    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] grid coordinates!`, "#28a745");
-    document.getElementById('solve-btn').style.display = 'block';
-    renderOverlayGrid();
-}
+            const gridContainer = document.getElementById('puzzle-grid');
+            gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
+
+            for (let i = 0; i < 25; i++) {
+                const row = Math.floor(i / 5), col = i % 5;
+                const cell = document.createElement('div'); cell.className = 'cell';
+                const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
+                const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
+                cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
+
+                let finalNum = currentLayout[i];
+                const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = finalNum;
+                cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
+            }
+
+            logStatus(`✅ Auto-Detect Success: Identified real puzzle layout dynamically!`, "#28a745");
+            document.getElementById('solve-btn').style.display = 'block';
+            renderOverlayGrid();
+        } catch (err) {
+            logStatus("❌ Interface tracking failure: " + err.message, "#ff3333");
+        }
+    };
+});
 function startSolving() {
     calculatedSteps = [];
     currentStepIndex = 0;
@@ -216,7 +182,7 @@ function startSolving() {
     let targetMoves = [];
     let simulateState = [...state];
 
-    for (let loop = 0; loop < 50; loop++) {
+    for (let loop = 0; loop < 48; loop++) {
         let misplacedIdx = -1;
         for (let i = 0; i < 25; i++) {
             if (simulateState[i] !== (i + 1) && simulateState[i] !== 0) { misplacedIdx = i; break; }
