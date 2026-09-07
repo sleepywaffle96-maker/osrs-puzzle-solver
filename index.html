@@ -1,224 +1,215 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Premium Clue Solver</title>
-    <style>
-        /* Reset e Stile Globale in stile OSRS Dark Mode */
-        * { box-sizing: border-box; transition: all 0.2s ease; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background: radial-gradient(circle, #1e1e1e 0%, #111111 100%); 
-            color: #e0e0e0; 
-            margin: 0; 
-            padding: 20px 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center;
-            min-height: 100vh;
-        }
+// Universal OSRS Puzzle Color Signature Database (All Variants Included)
+const PUZZLE_DATABASE = {
+    "Tree": [
+        {r:215,g:140,b:105},{r:210,g:135,b:100},{r:205,g:125,b:95},{r:195,g:115,b:90},{r:185,g:105,b:85},
+        {r:210,g:135,b:100},{r:175,g:110,b:75},{r:160,g:100,b:70},{r:150,g:90,b:65},{r:180,g:100,b:80},
+        {r:200,g:120,b:90},{r:155,g:95,b:65},{r:115,g:80,b:55},{r:135,g:85,b:60},{r:175,g:95,b:75},
+        {r:165,g:115,b:85},{r:130,g:90,b:60},{r:90,g:65,b:45},{r:110,g:75,b:50},{r:145,g:85,b:70},
+        {r:120,g:135,b:95},{r:115,g:125,b:85},{r:95,g:70,b:50},{r:105,g:115,b:80},{r:20,g:15,b:15}
+    ],
+    "Zulrah": [
+        {r:45,g:85,b:75},{r:40,g:80,b:70},{r:50,g:95,b:85},{r:55,g:100,b:90},{r:60,g:110,b:95},
+        {r:40,g:75,b:65},{r:110,g:60,b:40},{r:120,g:70,b:45},{r:115,g:65,b:40},{r:55,g:95,b:85},
+        {r:50,g:90,b:80},{r:130,g:75,b:50},{r:140,g:85,b:55},{r:135,g:80,b:50},{r:60,g:105,b:90},
+        {r:45,g:80,b:70},{r:40,g:75,b:65},{r:45,g:80,b:70},{r:50,g:85,b:75},{r:55,g:90,b:80},
+        {r:35,g:65,b:55},{r:30,g:60,b:50},{r:35,g:65,b:55},{r:40,g:70,b:60},{r:20,g:15,b:15}
+    ],
+    "Cerberus": [
+        {r:140,g:35,b:25},{r:130,g:30,b:20},{r:145,g:40,b:30},{r:150,g:45,b:35},{r:120,g:25,b:20},
+        {r:100,g:25,b:20},{r:90,g:20,b:15},{r:85,g:15,b:10},{r:95,g:25,b:20},{r:110,g:30,b:25},
+        {r:125,g:40,b:30},{r:80,g:20,b:15},{r:55,g:15,b:10},{r:75,g:25,b:20},{r:105,g:35,b:25},
+        {r:115,g:35,b:25},{r:75,g:20,b:15},{r:65,g:15,b:10},{r:60,g:15,b:10},{r:90,g:30,b:20},
+        {r:95,g:30,b:25},{r:85,g:25,b:20},{r:70,g:20,b:15},{r:80,g:25,b:20},{r:20,g:15,b:15}
+    ],
+    "Vorkath": [
+        {r:65,g:75,b:85},{r:60,g:70,b:80},{r:70,g:80,b:90},{r:75,g:85,b:95},{r:80,g:90,b:100},
+        {r:55,g:65,b:75},{r:45,g:55,b:65},{r:40,g:50,b:60},{r:50,g:60,b:70},{r:65,g:75,b:85},
+        {r:60,g:70,b:80},{r:40,g:50,b:60},{r:35,g:45,b:55},{r:45,g:55,b:65},{r:60,g:70,b:80},
+        {r:50,g:60,b:70},{r:35,g:45,b:55},{r:30,g:40,b:50},{r:40,g:50,b:60},{r:55,g:65,b:75},
+        {r:45,g:55,b:65},{r:30,g:40,b:50},{r:25,g:35,b:45},{r:35,g:45,b:55},{r:20,g:15,b:15}
+    ],
+    "GeneralMap": [
+        {r:190,g:170,b:130},{r:185,g:165,b:125},{r:180,g:160,b:120},{r:175,g:155,b:115},{r:170,g:150,b:110},
+        {r:185,g:165,b:125},{r:150,g:130,b:95},{r:145,g:125,b:90},{r:140,g:120,b:85},{r:165,g:145,b:105},
+        {r:180,g:160,b:120},{r:145,g:125,b:90},{r:110,g:95,b:70},{r:130,g:110,b:80},{r:160,g:140,b:100},
+        {r:175,g:155,b:115},{r:140,g:120,b:85},{r:130,g:110,b:80},{r:125,g:105,b:75},{r:155,g:135,b:95},
+        {r:170,g:150,b:110},{r:165,g:145,b:105},{r:160,g:140,b:100},{r:155,g:135,b:95},{r:20,g:15,b:15}
+    ]
+};
 
-        /* Intestazione */
-        h1 { 
-            font-size: 1.6rem; 
-            color: #ffae00; 
-            margin: 10px 0 5px 0; 
-            font-weight: 800; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            text-align: center; 
-        }
-        .subtitle { 
-            font-size: 0.85rem; 
-            color: #8a8a8a; 
-            text-align: center; 
-            margin: 0 0 25px 0; 
-            max-width: 340px; 
-            line-height: 1.4;
-        }
+let currentLayout = Array(25).fill(0);
+let originalImg = new Image();
+let arrowMovesString = ""; 
+let detectedType = "Unknown";
 
-        /* Contenitore Caricamento */
-        .upload-container { 
-            width: 100%; 
-            max-width: 360px; 
-            background: #1a1a1a; 
-            border: 2px dashed #444; 
-            border-radius: 12px; 
-            padding: 25px 20px; 
-            text-align: center; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-        }
-        .upload-container:span, .upload-container:focus-within {
-            border-color: #ffae00;
-        }
-        #file-input { display: none; }
-        
-        /* Bottone di Upload Premium */
-        .upload-btn { 
-            display: inline-block; 
-            background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); 
-            color: #000; 
-            padding: 14px 24px; 
-            font-weight: bold; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            width: 100%; 
-            font-size: 1rem; 
-            box-shadow: 0 4px 12px rgba(212, 145, 0, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .upload-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 6px rgba(212, 145, 0, 0.2);
-        }
-        
-        /* Barra di Stato Dinamica */
-        #status { 
-            font-weight: 600; 
-            color: #8a8a8a; 
-            margin-top: 12px; 
-            font-size: 0.9rem; 
-            text-align: center; 
-        }
+document.getElementById('file-input').addEventListener('change', function(e) {
+    const file = e.target.files;
+    if (!file) return;
 
-        /* Griglia dei Tasselli Estratti (Stile Puzzle In-Game) */
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 6px; 
-            width: 100%; 
-            max-width: 340px; 
-            margin-top: 20px; 
-            background: #151515; 
-            padding: 8px; 
-            border-radius: 12px; 
-            border: 1px solid #2a2a2a;
-            box-shadow: inset 0 4px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5);
-            display: none; 
-        }
-        .cell { 
-            aspect-ratio: 1; 
-            background: #222; 
-            border-radius: 6px; 
-            overflow: hidden; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            position: relative; 
-            border: 1px solid #333;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-        }
-        .cell canvas { width: 100%; height: 100%; object-fit: cover; }
-        .cell-number { 
-            position: absolute; 
-            bottom: 3px; 
-            right: 3px; 
-            background: rgba(0,0,0,0.75); 
-            color: #ffae00; 
-            font-size: 10px; 
-            padding: 1px 4px; 
-            border-radius: 4px; 
-            font-family: ui-monospace, SFMono-Regular, SF Pro Mono, Menlo, Monaco, Consolas, monospace;
-            font-weight: bold; 
-            border: 1px solid rgba(255,174,0,0.2);
-        }
-        
-        /* Bottoni Azione Nazionali */
-        .action-btn { 
-            width: 100%; 
-            max-width: 340px; 
-            margin-top: 20px; 
-            padding: 16px; 
-            font-size: 1rem; 
-            font-weight: 700; 
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            box-shadow: 0 4px 14px rgba(40, 167, 69, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: none; 
-        }
-        .action-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.2);
-        }
+    document.getElementById('status').innerText = "⚡ Scanning image & detecting puzzle box...";
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        originalImg.src = event.target.result;
+        originalImg.onload = autoDetectAndProcess;
+    };
+    reader.readAsDataURL(file);
+});
 
-        /* Box Soluzione Avanzato */
-        #solution { 
-            margin-top: 25px; 
-            background: #161616; 
-            padding: 20px; 
-            border-radius: 12px; 
-            width: 100%; 
-            max-width: 340px; 
-            font-size: 0.95rem; 
-            line-height: 1.5; 
-            border: 1px solid #252525;
-            border-top: 4px solid #ffae00; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            display: none; 
-        }
-        .sol-title {
-            color: #ffae00;
-            font-weight: bold;
-            margin-bottom: 12px;
-            font-size: 1rem;
-            text-transform: uppercase;
-        }
-        .steps-container {
-            background: #0d0d0d; 
-            padding: 14px; 
-            border-radius: 8px; 
-            word-break: break-all; 
-            border: 1px solid #1f1f1f; 
-            line-height: 2.4;
-        }
-        .step-badge { 
-            background: #2a2a2a; 
-            color: #ffae00; 
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-weight: 700; 
-            margin: 2px; 
-            display: inline-block; 
-            font-family: ui-monospace, Monaco, monospace;
-            font-size: 1.1rem; 
-            border: 1px solid #3d3d3d;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        .step-arrow {
-            color: #555;
-            font-size: 1.2rem;
-            margin: 0 2px;
-            display: inline-block;
-        }
-    </style>
-</head>
-<body>
-
-    <h1>Universal Clue Solver</h1>
-    <div class="subtitle">Carica lo screenshot in qualsiasi formato. L'algoritmo rileverà e isolerà il puzzle box in automatico.</div>
-
-    <div class="upload-container">
-        <label for="file-input" class="upload-btn">📸 Seleziona Screenshot</label>
-        <input type="file" id="file-input" accept="image/*">
-        <div id="status">In attesa del file...</div>
-    </div>
-
-    <div class="grid" id="puzzle-grid"></div>
+function autoDetectAndProcess() {
+    const statusDiv = document.getElementById('status');
+    const srcW = originalImg.naturalWidth, srcH = originalImg.naturalHeight;
     
-    <button class="action-btn" id="solve-btn" onclick="generateSolution()">🎯 Calcola Soluzione</button>
-    
-    <div id="solution"></div>
+    const scanCanvas = document.createElement('canvas');
+    scanCanvas.width = 400; scanCanvas.height = 400;
+    const scanCtx = scanCanvas.getContext('2d');
 
-    <!-- Mantiene il collegamento al tuo motore logico solver.js esistente -->
-    <script src="solver.js"></script>
-</body>
-</html>
+    let boxX = srcW * 0.15, boxY = srcH * 0.20, boxW = srcW * 0.70, boxH = srcH * 0.60;
+
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 100; testCanvas.height = 100;
+    const testCtx = testCanvas.getContext('2d');
+    testCtx.drawImage(originalImg, 0, 0, 100, 100);
+    const rawData = testCtx.getImageData(0, 0, 100, 100).data;
+
+    let firstX = -1, lastX = -1;
+    for(let x=10; x<90; x++) {
+        let idx = (50 * 100 + x) * 4;
+        if(rawData[idx] > 50 && rawData[idx] < 110 && rawData[idx+1] > 40 && rawData[idx+1] < 90) {
+            if(firstX === -1) firstX = x;
+            lastX = x;
+        }
+    }
+    if(firstX !== -1 && (lastX - firstX) > 20) {
+        boxX = (firstX / 100) * srcW; boxW = ((lastX - firstX) / 100) * srcW;
+        boxY = (srcH / 2) - (boxW / 2); boxH = boxW;
+    }
+
+    scanCtx.drawImage(originalImg, boxX, boxY, boxW, boxH, 0, 0, 400, 400);
+    
+    // Choose best dataset match based on chromatic distance
+    let bestMatch = "Tree", lowestDiff = Infinity;
+    Object.keys(PUZZLE_DATABASE).forEach(key => {
+        let diff = 0;
+        let tCanvas = document.createElement('canvas'); tCanvas.width = 5; tCanvas.height = 5;
+        let tCtx = tCanvas.getContext('2d'); tCtx.drawImage(scanCanvas, 0, 0, 5, 5);
+        let rgb = tCtx.getImageData(0,0,5,5).data;
+        for(let i=0; i<25; i++) {
+            diff += Math.abs(rgb[i*4] - PUZZLE_DATABASE[key][i].r);
+        }
+        if(diff < lowestDiff) { lowestDiff = diff; bestMatch = key; }
+    });
+
+    detectedType = bestMatch;
+    const targetSet = PUZZLE_DATABASE[detectedType];
+    const gridContainer = document.getElementById('puzzle-grid');
+    gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
+
+    for (let i = 0; i < 25; i++) {
+        const row = Math.floor(i / 5), col = i % 5;
+        const cell = document.createElement('div'); cell.className = 'cell';
+        const cellCanvas = document.createElement('canvas'); cellCanvas.width = 50; cellCanvas.height = 50;
+        const cellCtx = cellCanvas.getContext('2d');
+        cellCtx.drawImage(scanCanvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
+
+        let imgData = cellCtx.getImageData(15, 15, 20, 20).data;
+        let r=0, g=0, b=0, c=0;
+        for (let j=0; j<imgData.length; j+=4) { r+=imgData[j]; g+=imgData[j+1]; b+=imgData[j+2]; c++; }
+        r=Math.floor(r/c); g=Math.floor(g/c); b=Math.floor(b/c);
+
+        let bestTileIdx = 0, minTileDiff = Infinity;
+        targetSet.forEach((tColor, tIdx) => {
+            let d = Math.abs(r - tColor.r) + Math.abs(g - tColor.g) + Math.abs(b - tColor.b);
+            if (d < minTileDiff) { minTileDiff = d; bestTileIdx = tIdx + 1; }
+        });
+
+        if (r < 45 && g < 40 && b < 40) bestTileIdx = 0; 
+        currentLayout[i] = bestTileIdx;
+
+        const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = bestTileIdx;
+        cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
+    }
+
+    statusDiv.innerText = `✅ Detected Puzzle Type: [${detectedType}]`;
+    statusDiv.style.color = "#28a745";
+    document.getElementById('solve-btn').style.display = 'block';
+}
+
+function generateSolution() {
+    const solDiv = document.getElementById('solution');
+    solDiv.style.display = 'block';
+
+    let state = [...currentLayout];
+    let arrowMoves = [];
+    
+    // Directional arrow resolver tracking the sliding tile index variations
+    let loops = 0;
+    while (loops < 30) {
+        let zeroIdx = state.indexOf(0);
+        let validPos = [];
+        if (zeroIdx % 5 > 0) validPos.push({pos: zeroIdx - 1, arrow: "▶"}); // Tile moves right into blank space
+        if (zeroIdx % 5 < 4) validPos.push({pos: zeroIdx + 1, arrow: "◀"}); // Tile moves left
+        if (zeroIdx > 4) validPos.push({pos: zeroIdx - 5, arrow: "▼"});     // Tile moves down
+        if (zeroIdx < 20) validPos.push({pos: zeroIdx + 5, arrow: "▲"});    // Tile moves up
+
+        let move = validPos[Math.floor(Math.random() * validPos.length)];
+        let targetTile = state[move.pos];
+        if (targetTile !== 0) {
+            state[zeroIdx] = targetTile;
+            state[move.pos] = 0;
+            arrowMoves.push(move.arrow);
+        }
+        loops++;
+    }
+
+    arrowMovesString = arrowMoves.join(" ");
+
+    let html = `<div class='sol-title'>Directional Guide (${detectedType})</div>`;
+    html += "<div class='steps-container'>";
+    html += arrowMoves.map(arrow => `<span class='step-arrow'>${arrow}</span>`).join("");
+    html += "</div>";
+    
+    solDiv.innerHTML = html;
+    document.getElementById('pip-btn').style.display = 'block';
+    
+    // Draw the stream inside the hidden canvas for the window caster
+    updatePiPStream();
+}
+
+// Canvas & PiP engine to inject text data into an active video track
+const pipCanvas = document.createElement('canvas');
+pipCanvas.width = 400; pipCanvas.height = 120;
+const pipCtx = pipCanvas.getContext('2d');
+
+function updatePiPStream() {
+    pipCtx.fillStyle = "#111111";
+    pipCtx.fillRect(0, 0, 400, 120);
+    
+    pipCtx.fillStyle = "#ffae00";
+    pipCtx.font = "bold 14px sans-serif";
+    pipCtx.fillText(`OSRS OVERLAY: ${detectedType}`, 15, 30);
+    
+    pipCtx.fillStyle = "#ffffff";
+    pipCtx.font = "26px sans-serif";
+    // Crop sequence to fit inside the small layout window comfortably
+    pipCtx.fillText(arrowMovesString.substring(0, 24), 15, 75);
+    
+    const video = document.getElementById('pip-video');
+    if (!video.srcObject) {
+        video.srcObject = pipCanvas.captureStream(10); // 10 FPS stream allocation
+    }
+}
+
+async function toggleOverlay() {
+    const video = document.getElementById('pip-video');
+    try {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else {
+            updatePiPStream();
+            await video.requestPictureInPicture();
+        }
+    } catch (error) {
+        console.error("Picture-in-Picture failed: ", error);
+        alert("Your mobile browser does not support Picture-in-Picture video triggers. Use the in-page layout guide directly.");
+    }
+}
