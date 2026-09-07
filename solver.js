@@ -40,11 +40,9 @@ document.addEventListener("DOMContentLoaded", function() {
         img.src = URL.createObjectURL(files[0]);
         
         img.onload = function() {
-            // Se esiste già un vecchio mirino, lo cancella per non duplicarlo
             let wrapper = document.getElementById('crop-area-wrapper');
             if (wrapper) wrapper.remove();
 
-            // CREAZIONE AUTOMATICA DEL CONTENITORE DIRETTAMENTE VIA CODICE
             wrapper = document.createElement('div');
             wrapper.id = 'crop-area-wrapper';
             wrapper.style.display = 'flex';
@@ -70,11 +68,18 @@ document.addEventListener("DOMContentLoaded", function() {
             viewImg.style.cursor = 'move';
             viewImg.style.maxWidth = 'none';
 
-            // Adatta l'anteprima dello screenshot a una larghezza standard di controllo
-            let initialWidth = 600; 
+            // SCALATURA OTTIMIZZATA: Riduce lo screenshot a 360px per renderlo leggerissimo da muovere
+            let initialWidth = 360; 
             let scaleFactor = initialWidth / img.naturalWidth;
             viewImg.style.width = `${initialWidth}px`;
             viewImg.style.height = `${img.naturalHeight * scaleFactor}px`;
+
+            // Pre-centra l'immagine automaticamente nel mirino per farti fare meno strada
+            let centerPosX = -((initialWidth - 300) / 2);
+            let centerPosY = -(((img.naturalHeight * scaleFactor) - 300) / 2);
+            let posX = centerPosX, posY = centerPosY;
+            viewImg.style.left = `${posX}px`;
+            viewImg.style.top = `${posY}px`;
 
             const cropBtn = document.createElement('button');
             cropBtn.innerText = "🎯 CONFERMA RITAGLIO E RISOLVI";
@@ -87,11 +92,9 @@ document.addEventListener("DOMContentLoaded", function() {
             wrapper.appendChild(viewport);
             wrapper.appendChild(cropBtn);
 
-            // Inserisce il mirino direttamente sotto la barra gialla dell'upload box
             document.getElementById('upload-box').after(wrapper);
 
-            // Gestione del movimento dell'immagine (Drag & Touch sia su PC che iPad)
-            let isDragging = false, startX, startY, posX = 0, posY = 0;
+            let isDragging = false, startX, startY;
 
             const startDrag = (cx, cy) => { isDragging = true; startX = cx - posX; startY = cy - posY; };
             const moveDrag = (cx, cy) => { if (!isDragging) return; posX = cx - startX; posY = cy - startY; viewImg.style.left = `${posX}px`; viewImg.style.top = `${posY}px`; };
@@ -101,8 +104,8 @@ document.addEventListener("DOMContentLoaded", function() {
             window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
             window.addEventListener('mouseup', endDrag);
 
-            viewImg.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY));
-            viewImg.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
+            viewImg.addEventListener('touchstart', (e) => { const t = e.touches[0]; startDrag(t.clientX, t.clientY); });
+            viewImg.addEventListener('touchmove', (e) => { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); });
             viewImg.addEventListener('touchend', endDrag);
 
             cropBtn.onclick = function() {
@@ -156,7 +159,8 @@ function processSelectedPuzzle(canvas, ctx) {
     renderOverlayGrid();
 }
 function startSolving() {
-    calculatedSteps = []; currentStepIndex = 0;
+    calculatedSteps = []; 
+    currentStepIndex = 0;
     let state = [...currentLayout];
     let currentZero = state.indexOf(0);
     if (currentZero === -1) currentZero = 24;
@@ -178,7 +182,8 @@ function startSolving() {
         if (currentZero < 20) neighbors.push({ idx: currentZero + 5, dir: "▲" });
 
         if (neighbors.length > 0) {
-            let bestMove = neighbors; let minDistance = Infinity;
+            let bestMove = neighbors; 
+            let minDistance = Infinity;
             neighbors.forEach(n => {
                 let dist = Math.abs((n.idx % 5) - (misplacedIdx % 5)) + Math.abs(Math.floor(n.idx / 5) - Math.floor(misplacedIdx / 5));
                 if (dist < minDistance) { minDistance = dist; bestMove = n; }
@@ -208,8 +213,10 @@ if (typeof prevStep === 'undefined') {
 }
 
 function renderOverlayGrid() {
-    pipCtx.fillStyle = "rgba(20, 14, 9, 0.90)"; pipCtx.fillRect(0, 0, 300, 300);
-    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.3)"; pipCtx.lineWidth = 1;
+    pipCtx.fillStyle = "rgba(20, 14, 9, 0.90)"; 
+    pipCtx.fillRect(0, 0, 300, 300);
+    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.3)"; 
+    pipCtx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
         pipCtx.beginPath(); pipCtx.moveTo(i * 60, 0); pipCtx.lineTo(i * 60, 300); pipCtx.stroke();
         pipCtx.beginPath(); pipCtx.moveTo(0, i * 60); pipCtx.lineTo(300, i * 60); pipCtx.stroke();
@@ -223,14 +230,20 @@ function renderOverlayGrid() {
         let stepIdx = currentStepIndex + offset;
         if (stepIdx >= calculatedSteps.length) break;
         let moveData = calculatedSteps[stepIdx];
-        let gridIdx = moveData.gridIndex; let col = gridIdx % 5; let row = Math.floor(gridIdx / 5);
-        let tileCenterX = col * 60 + 30; let tileCenterY = row * 60 + 30;
+        let gridIdx = moveData.gridIndex; 
+        let col = gridIdx % 5; 
+        let row = Math.floor(gridIdx / 5);
+        let tileCenterX = col * 60 + 30; 
+        let tileCenterY = row * 60 + 30;
         pipCtx.fillStyle = opacityLevels[offset];
         pipCtx.font = offset === 0 ? "bold 34px sans-serif" : "24px sans-serif";
-        pipCtx.textAlign = "center"; pipCtx.textBaseline = "middle";
+        pipCtx.textAlign = "center"; 
+        pipCtx.textBaseline = "middle";
         pipCtx.fillText(moveData.direction, tileCenterX, tileCenterY);
         if (offset === 0) {
-            pipCtx.strokeStyle = "#28a745"; pipCtx.lineWidth = 4; pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
+            pipCtx.strokeStyle = "#28a745"; 
+            pipCtx.lineWidth = 4; 
+            pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
             document.getElementById('solution').innerHTML = `
                 <strong style='color:#ffae00; font-size:1.1rem;'>Mossa: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
                 <span style='font-size:1.1rem; color:#fff;'>Fai scorrere il tassello: <b>${moveData.direction}</b></span>
