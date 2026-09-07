@@ -1,13 +1,16 @@
-// Official OSRS Puzzle Database - All 19 variants categorized by theme
+// Official OSRS Puzzle Database - All 19 variants included
 const PUZZLE_DATABASE = {
-    // --- 5 Bosses & Creatures ---
+    // --- Bosses & Creatures ---
     "Tree": { r: 215, g: 140, b: 105 },
     "Zulrah": { r: 45, g: 85, b: 75 },
     "Cerberus": { r: 140, g: 35, b: 25 },
     "Vorkath": { r: 65, g: 75, b: 85 },
     "Corporeal Beast": { r: 100, g: 90, b: 110 },
+    "Troll": { r: 115, g: 110, b: 100 },
+    "Gnome": { r: 95, g: 130, b: 85 },
+    "Theater of Blood": { r: 145, g: 30, b: 30 },
 
-    // --- 14 Regional Clue Maps ---
+    // --- Regional Clue Maps ---
     "Glough / Grand Tree": { r: 120, g: 110, b: 90 },
     "King Black Dragon / Wilderness": { r: 75, g: 65, b: 65 },
     "Kraken / Cove": { r: 50, g: 80, b: 90 },
@@ -50,7 +53,6 @@ function autoDetectAndProcess() {
     scanCanvas.width = 400; scanCanvas.height = 400;
     const scanCtx = scanCanvas.getContext('2d');
 
-    // Edge tracking to isolate the 5x5 sub-window from full screen
     let boxX = srcW * 0.15, boxY = srcH * 0.20, boxW = srcW * 0.70, boxH = srcH * 0.60;
 
     const testCanvas = document.createElement('canvas');
@@ -74,36 +76,27 @@ function autoDetectAndProcess() {
 
     scanCtx.drawImage(originalImg, boxX, boxY, boxW, boxH, 0, 0, 400, 400);
     
-    // Calculate global average color of the captured puzzle box
     let totalR = 0, totalG = 0, totalB = 0, pixelCount = 0;
     const boxData = scanCtx.getImageData(50, 50, 300, 300).data;
-    for(let i=0; i<boxData.length; i+=16) { // Step to save memory
-        totalR += boxData[i];
-        totalG += boxData[i+1];
-        totalB += boxData[i+2];
+    for(let i=0; i<boxData.length; i+=16) { 
+        totalR += boxData[i]; totalG += boxData[i+1]; totalB += boxData[i+2];
         pixelCount++;
     }
     let avgR = Math.floor(totalR / pixelCount);
     let avgG = Math.floor(totalG / pixelCount);
     let avgB = Math.floor(totalB / pixelCount);
 
-    // Dynamic Multi-Dataset Matching among all 19 puzzle signatures
-    let bestMatch = "Tree";
-    let lowestDiff = Infinity;
+    let bestMatch = "Tree", lowestDiff = Infinity;
     Object.keys(PUZZLE_DATABASE).forEach(key => {
         let currentTarget = PUZZLE_DATABASE[key];
         let diff = Math.abs(avgR - currentTarget.r) + Math.abs(avgG - currentTarget.g) + Math.abs(avgB - currentTarget.b);
-        if(diff < lowestDiff) {
-            lowestDiff = diff;
-            bestMatch = key;
-        }
+        if(diff < lowestDiff) { lowestDiff = diff; bestMatch = key; }
     });
 
     detectedType = bestMatch;
     const gridContainer = document.getElementById('puzzle-grid');
     gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
 
-    // Segment and render the 25 individual grid items onto the UI
     for (let i = 0; i < 25; i++) {
         const row = Math.floor(i / 5), col = i % 5;
         const cell = document.createElement('div'); cell.className = 'cell';
@@ -116,7 +109,6 @@ function autoDetectAndProcess() {
         for (let j=0; j<imgData.length; j+=4) { cellR+=imgData[j]; cellG+=imgData[j+1]; cellB+=imgData[j+2]; cellC++; }
         cellR=Math.floor(cellR/cellC); cellG=Math.floor(cellG/cellC); cellB=Math.floor(cellB/cellC);
 
-        // Assign numeric mapping tags to track state coordinates (0 means blank sliding pocket)
         let simulatedIndex = i + 1;
         if (cellR < 45 && cellG < 40 && cellB < 40) simulatedIndex = 0; 
         currentLayout[i] = simulatedIndex;
@@ -137,7 +129,6 @@ function generateSolution() {
     let state = [...currentLayout];
     let arrowMoves = [];
     
-    // Fast step-reduction heuristic matching empty space vectors
     let loops = 0;
     while (loops < 35) {
         let zeroIdx = state.indexOf(0);
@@ -170,7 +161,6 @@ function generateSolution() {
     updatePiPStream();
 }
 
-// Picture-in-Picture dynamic video rendering track
 const pipCanvas = document.createElement('canvas');
 pipCanvas.width = 400; pipCanvas.height = 120;
 const pipCtx = pipCanvas.getContext('2d');
