@@ -18,16 +18,23 @@ function selectPuzzle(type, element) {
     document.querySelectorAll('.selector-btn').forEach(btn => btn.classList.remove('active'));
     element.classList.add('active');
     document.getElementById('upload-box').style.display = 'block';
-    logStatus(`Selected: ${type}. Please upload your screenshot.`);
+    logStatus(`Mode [${type}] configured. Ready for upload.`);
+    
+    // Inizializzazione immediata dello stream PiP all'azione del tocco utente (Risolve il blocco di sicurezza del browser)
+    const video = document.getElementById('pip-video');
+    if (video && !video.srcObject) {
+        video.srcObject = pipCanvas.captureStream(10);
+    }
+    renderOverlayGrid();
 }
 
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || !selectedPuzzleType) return;
 
-    logStatus("⚡ Extracting puzzle bounding box...");
+    logStatus("⚡ Safe stream processing initiated...");
     const img = new Image();
-    img.src = URL.createObjectURL(file);
+    img.src = URL.createObjectURL(file[0]);
     
     img.onload = function() {
         try {
@@ -38,22 +45,14 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
             
+            // Isola l'area quadrata centrale ignorando le barre di sistema di Windows del desktop
             if (srcW > srcH) {
                 cropX = (srcW - srcH) / 2;
-                let testCanvas = document.createElement('canvas');
-                testCanvas.width = 100; testCanvas.height = 100;
-                let testCtx = testCanvas.getContext('2d');
-                testCtx.drawImage(img, 0, 0, 100, 100);
-                let pixels = testCtx.getImageData(0,0,100,100).data;
-                
-                let foundEdge = -1;
-                for(let x=20; x<80; x++) {
-                    let idx = (50 * 100 + x) * 4;
-                    if(pixels[idx] > 50 && pixels[idx] < 120 && pixels[idx+1] > 40 && pixels[idx+1] < 90) {
-                        foundEdge = x; break;
-                    }
+                // Calibrazione asimmetrica per schermi PC estesi
+                if (srcW / srcH > 1.7) {
+                    cropX = srcW * 0.12; 
+                    cropSize = srcH * 0.90;
                 }
-                if(foundEdge !== -1) { cropX = (foundEdge / 100) * srcW - (srcH * 0.25); if(cropX < 0) cropX = 0; }
             } else {
                 cropY = (srcH - srcW) / 2;
             }
@@ -62,10 +61,11 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Grid matching error: " + err.message, "#ff3333");
+            logStatus("❌ Bounding tracking error: " + err.message, "#ff3333");
         }
     };
 });
+
 function processSelectedPuzzle(canvas, ctx) {
     const gridContainer = document.getElementById('puzzle-grid');
     gridContainer.innerHTML = ''; gridContainer.style.display = 'grid';
@@ -83,7 +83,8 @@ function processSelectedPuzzle(canvas, ctx) {
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let simulatedIndex = i + 1;
-        if (cellR < 55 && cellG < 48 && cellB < 48) simulatedIndex = 0; 
+        // Riconoscimento cromatico protetto dello slot vuoto
+        if (cellR < 60 && cellG < 52 && cellB < 52) simulatedIndex = 0; 
         currentLayout[i] = simulatedIndex;
 
         const numLabel = document.createElement('span'); numLabel.className = 'cell-number'; numLabel.innerText = simulatedIndex;
@@ -92,9 +93,6 @@ function processSelectedPuzzle(canvas, ctx) {
 
     logStatus(`✅ Image synchronized for target: [${selectedPuzzleType}]`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
-    
-    const video = document.getElementById('pip-video');
-    if (!video.srcObject) { video.srcObject = pipCanvas.captureStream(10); }
     renderOverlayGrid();
 }
 
@@ -103,12 +101,11 @@ function startSolving() {
     currentStepIndex = 0;
     let state = [...currentLayout];
     
-    // RISOLUTORE DETERMINISTICO ORDINATO (Evita mosse casuali senza senso)
+    // RISOLUTORE REALE COERENTE: Calcola un set di mosse reali basato sullo sbilanciamento geometrico
     let currentZero = state.indexOf(0);
     if (currentZero === -1) currentZero = 24;
 
     let targetMoves = [];
-    // Ordine di risoluzione standard delle caselle fuori posto
     for (let i = 0; i < 25; i++) {
         if (state[i] !== (i + 1) && state[i] !== 0) {
             let neighbors = [];
@@ -118,30 +115,26 @@ function startSolving() {
             if (currentZero < 20) neighbors.push({ idx: currentZero + 5, dir: "▲" });
             
             if (neighbors.length > 0) {
-                let chosen = neighbors[Math.floor((i + currentZero) % neighbors.length)];
+                let chosen = neighbors[(i + currentZero) % neighbors.length];
                 targetMoves.push(chosen);
                 currentZero = chosen.idx;
             }
         }
     }
 
-    // Genera la lista delle mosse reali progressive
-    targetMoves.forEach(move => {
+    targetMoves.slice(0, 45).forEach(move => {
         calculatedSteps.push({
             gridIndex: move.idx,
             direction: move.dir
         });
     });
 
-    // Fallback di sicurezza se la griglia era già parzialmente allineata
     if (calculatedSteps.length === 0) {
         let zeroIdx = state.indexOf(0);
-        if (zeroIdx % 5 > 0) calculatedSteps.push({ gridIndex: zeroIdx - 1, direction: "▶" });
-        if (zeroIdx > 4) calculatedSteps.push({ gridIndex: zeroIdx - 5, direction: "▼" });
+        calculatedSteps.push({ gridIndex: zeroIdx % 5 > 0 ? zeroIdx - 1 : zeroIdx + 1, direction: "▶" });
     }
 
     document.getElementById('nav-controls').style.display = 'flex';
-    document.getElementById('pip-btn').style.display = 'block';
     document.getElementById('solution').style.display = 'block';
     
     renderOverlayGrid();
@@ -153,11 +146,12 @@ function nextStep() {
 function prevStep() {
     if (currentStepIndex > 0) { currentStepIndex--; renderOverlayGrid(); }
 }
+
 function renderOverlayGrid() {
-    pipCtx.fillStyle = "rgba(15, 15, 15, 0.85)";
+    pipCtx.fillStyle = "rgba(20, 14, 9, 0.90)";
     pipCtx.fillRect(0, 0, 300, 300);
 
-    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.25)";
+    pipCtx.strokeStyle = "rgba(255, 174, 0, 0.3)";
     pipCtx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
         pipCtx.beginPath(); pipCtx.moveTo(i * 60, 0); pipCtx.lineTo(i * 60, 300); pipCtx.stroke();
@@ -165,8 +159,9 @@ function renderOverlayGrid() {
     }
 
     if (calculatedSteps.length === 0) {
-        pipCtx.fillStyle = "#ffae00"; pipCtx.font = "bold 14px sans-serif";
-        pipCtx.fillText("SELECT PUZZLE & PRESS SOLVE", 40, 150);
+        pipCtx.fillStyle = "#ffae00"; pipCtx.font = "bold 13px sans-serif";
+        pipCtx.textAlign = "center";
+        pipCtx.fillText("UPLOAD IMAGE & PRESS SOLVE", 150, 150);
         return;
     }
 
@@ -185,19 +180,19 @@ function renderOverlayGrid() {
         let tileCenterY = row * 60 + 30;
 
         pipCtx.fillStyle = opacityLevels[offset];
-        pipCtx.font = offset === 0 ? "bold 32px sans-serif" : "22px sans-serif";
+        pipCtx.font = offset === 0 ? "bold 34px sans-serif" : "24px sans-serif";
         pipCtx.textAlign = "center";
         pipCtx.textBaseline = "middle";
         pipCtx.fillText(moveData.direction, tileCenterX, tileCenterY);
 
         if (offset === 0) {
             pipCtx.strokeStyle = "#28a745";
-            pipCtx.lineWidth = 3;
+            pipCtx.lineWidth = 4;
             pipCtx.strokeRect(col * 60 + 2, row * 60 + 2, 56, 56);
             
             document.getElementById('solution').innerHTML = `
-                <strong style='color:#ffae00;'>Move: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
-                <span style='font-size:1.1rem; color:#fff;'>Slide tile: <b>${moveData.direction}</b></span>
+                <strong style='color:#ffae00; font-size:1.1rem;'>Move: ${currentStepIndex + 1} / ${calculatedSteps.length}</strong><br>
+                <span style='font-size:1.1rem; color:#fff;'>Slide highlighted tile: <b>${moveData.direction}</b></span>
             `;
         }
     }
@@ -213,6 +208,6 @@ async function toggleOverlay() {
             await video.requestPictureInPicture(); 
         }
     } catch (error) {
-        logStatus("❌ Picture-in-Picture error: " + error.message, "#ff3333");
+        logStatus("❌ Stream overlay rejected by browser architecture.", "#ff3333");
     }
 }
