@@ -3,64 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Manual-Selection Overlay Solver</title>
+    <title>OSRS Ultimate Overlay Solver</title>
     <style>
         * { box-sizing: border-box; transition: all 0.15s ease; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: radial-gradient(circle, #1e1e1e 0%, #111111 100%); 
+            background: radial-gradient(circle, #221a12 0%, #0d0a07 100%); 
             color: #e0e0e0; margin: 0; padding: 20px 15px; 
             display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
-        h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; text-align: center; }
+        h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; text-align: center; text-shadow: 2px 2px #000; }
         .subtitle { font-size: 0.85rem; color: #8a8a8a; text-align: center; margin: 0 0 20px 0; max-width: 340px; }
         
-        /* 7 Puzzle Selection Grid */
-        .selector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 360px; margin-bottom: 20px; }
-        .selector-btn { background: #222; border: 2px solid #444; border-radius: 8px; padding: 10px; text-align: center; color: #fff; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
-        .selector-btn.active { border-color: #ffae00; background: #3a2f15; color: #ffae00; }
+        /* 7 Visual Puzzle Selection Grid (Runeclues Style) */
+        .selector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 360px; margin-bottom: 25px; }
+        .selector-btn { 
+            background: #2b211a; border: 2px solid #543f32; border-radius: 8px; padding: 6px; 
+            text-align: center; color: #fff; font-weight: bold; cursor: pointer; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .selector-btn img { width: 70px; height: 70px; border-radius: 4px; margin-bottom: 6px; border: 1px solid #333; background: #000; }
+        .selector-btn span { font-size: 0.9rem; color: #ffae00; text-transform: uppercase; letter-spacing: 0.5px; }
+        .selector-btn.active { border-color: #ffae00; background: #47321c; box-shadow: 0 0 12px rgba(255,174,0,0.3); }
 
-        .upload-container { width: 100%; max-width: 360px; background: #1a1a1a; border: 2px dashed #444; border-radius: 12px; padding: 25px 20px; text-align: center; display: none; }
+        .upload-container { width: 100%; max-width: 360px; background: #1c1510; border: 2px dashed #ffae00; border-radius: 12px; padding: 25px 20px; text-align: center; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.6); }
         #file-input { display: none; }
-        .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; }
-        #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #222; padding: 8px; border-radius: 6px; border: 1px solid #333; width: 100%; max-width: 360px; }
+        .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(255,174,0,0.2); }
+        #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #110c08; padding: 10px; border-radius: 6px; border: 1px solid #3a2a1c; }
         
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #151515; padding: 8px; border-radius: 12px; border: 1px solid #2a2a2a; display: none; }
-        .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #333; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #110d0a; padding: 8px; border-radius: 12px; border: 2px solid #3a2b1f; display: none; }
+        .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #443322; }
         .cell canvas { width: 100%; height: 100%; object-fit: cover; }
-        .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.75); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; }
+        .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.85); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; font-weight: bold; }
         
-        .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; display: none; }
-        .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
+        .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 12px rgba(40,167,69,0.3); display: none; }
+        .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); box-shadow: 0 4px 12px rgba(0,123,255,0.3); display: block !important; margin-top: 15px; }
         
         .nav-controls { display: flex; gap: 10px; width: 100%; max-width: 340px; margin-top: 15px; display: none; }
-        .nav-btn { flex: 1; padding: 12px; font-weight: bold; background: #333; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: center; }
+        .nav-btn { flex: 1; padding: 14px; font-weight: bold; background: #2b211a; color: #fff; border: 1px solid #543f32; border-radius: 8px; cursor: pointer; text-align: center; text-transform: uppercase; }
+        .nav-btn:active { background: #3a2e24; }
 
-        #solution { margin-top: 25px; background: #161616; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; border-top: 4px solid #ffae00; display: none; text-align: center; }
+        #solution { margin-top: 25px; background: #14100c; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; border-top: 4px solid #ffae00; display: none; text-align: center; border-left: 1px solid #2d2218; border-right: 1px solid #2d2218; border-bottom: 1px solid #2d2218; }
         #pip-video { display: none; }
     </style>
 </head>
 <body>
 
-    <h1>Universal Clue Solver</h1>
-    <div class="subtitle">Select your active puzzle box first, then upload the screenshot.</div>
+    <h1>Select Puzzle Box</h1>
+    <div class="subtitle">Click on your current clue scroll puzzle background to unlock overlay tools.</div>
 
-    <!-- Step 1: Select Box Theme -->
+    <!-- Step 1: 7 Selector buttons with custom CSS inline icons tracking OSRS pixel elements -->
     <div class="selector-grid">
-        <div class="selector-btn" onclick="selectPuzzle('Tree', this)">Tree</div>
-        <div class="selector-btn" onclick="selectPuzzle('Zulrah', this)">Zulrah</div>
-        <div class="selector-btn" onclick="selectPuzzle('Cerberus', this)">Cerberus</div>
-        <div class="selector-btn" onclick="selectPuzzle('Troll', this)">Troll</div>
-        <div class="selector-btn" onclick="selectPuzzle('Gnome', this)">Gnome</div>
-        <div class="selector-btn" onclick="selectPuzzle('Castle', this)">Castle</div>
-        <div class="selector-btn" onclick="selectPuzzle('ToB', this)">ToB</div>
+        <div class="selector-btn" onclick="selectPuzzle('Troll', this)">
+            <img src="https://runescape.wiki" alt="Troll">
+            <span>Troll</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('Tree', this)">
+            <img src="https://runescape.wiki" alt="Tree">
+            <span>Tree</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('Castle', this)">
+            <img src="https://runescape.wiki" alt="Castle">
+            <span>Castle</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('Zulrah', this)">
+            <img src="https://runescape.wiki" alt="Zulrah">
+            <span>Zulrah</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('Cerberus', this)">
+            <img src="https://runescape.wiki" alt="Cerberus">
+            <span>Cerberus</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('Gnome', this)">
+            <img src="https://runescape.wiki" alt="Gnome">
+            <span>Gnome</span>
+        </div>
+        <div class="selector-btn" onclick="selectPuzzle('ToB', this)">
+            <img src="https://runescape.wiki" alt="Theatre of Blood">
+            <span>ToB</span>
+        </div>
     </div>
 
-    <!-- Step 2: Upload Area -->
+    <!-- Step 2: Adaptive Upload Panel -->
     <div class="upload-container" id="upload-box">
         <label for="file-input" class="upload-btn">📸 Select Screenshot</label>
         <input type="file" id="file-input" accept="image/*">
-        <div id="status">Puzzle chosen. Ready for image upload.</div>
+        <div id="status">Variant configuration active. Awaiting image file.</div>
     </div>
 
     <div class="grid" id="puzzle-grid"></div>
@@ -68,7 +97,7 @@
     
     <div class="nav-controls" id="nav-controls">
         <button class="nav-btn" onclick="prevStep()">◀ BACKSTEP</button>
-        <button class="nav-btn" style="background:#ffae00; color:#000;" onclick="nextStep()">NEXT STEP ▶</button>
+        <button class="nav-btn" style="background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000;" onclick="nextStep()">NEXT STEP ▶</button>
     </div>
 
     <button class="action-btn pip-btn" id="pip-btn" onclick="toggleOverlay()">📺 Open Float Overlay</button>
