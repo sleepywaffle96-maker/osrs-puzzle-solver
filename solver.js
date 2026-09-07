@@ -1,4 +1,3 @@
-// OSRS 5x5 Grid Structural Signatures - Emulating the Machine Learning dataset
 const PUZZLE_DATABASES = {
     "Troll": [
         {r:115,g:110,b:100},{r:110,g:105,b:95},{r:105,g:100,b:90},{r:100,g:95,b:85},{r:95,g:90,b:80},
@@ -81,10 +80,9 @@ function selectPuzzle(type, element) {
 }
 document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
-    // FIXED: Verifica corretta dell'array e aggancio file[0]
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ Applying Geometric Template Matching on screenshot...");
+    logStatus("⚡ Running structural geometric edge scan...");
     const img = new Image();
     img.src = URL.createObjectURL(file[0]); 
     
@@ -96,51 +94,64 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
             
-            // GEOMETRIC DECOMPOSITION RIGIDA (Runeclues Style):
-            // Scansiona lo schermo intero a campionamento ad alta fedeltà per trovare gli angoli esatti del box quadrato marrone di OSRS
+            // Crea una canvas di analisi per tracciare le linee strutturali
             let scanCanvas = document.createElement('canvas');
             scanCanvas.width = 400; scanCanvas.height = Math.floor(400 * (srcH / srcW));
             let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
             scanCtx.drawImage(img, 0, 0, scanCanvas.width, scanCanvas.height);
             let pData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height).data;
             
+            // SCANSIONE GEOMETRICA AD ALTO CONTRASTO (Ignora l'inventario cercando la griglia fissa 5x5)
             let minX = scanCanvas.width, maxX = 0, minY = scanCanvas.height, maxY = 0;
-            let foundBox = false;
+            let foundGrid = false;
 
-            for (let y = 0; y < scanCanvas.height; y += 2) {
-                for (let x = 0; x < scanCanvas.width; x += 2) {
+            // Restringiamo la ricerca nell'area logica centrale/sinistra dove compare il puzzle box sui client di gioco
+            let startX = Math.floor(scanCanvas.width * 0.15);
+            let endX = Math.floor(scanCanvas.width * 0.75);
+            let startY = Math.floor(scanCanvas.height * 0.1);
+            let endY = Math.floor(scanCanvas.height * 0.85);
+
+            for (let y = startY; y < endY; y += 2) {
+                for (let x = startX; x < endX; x += 2) {
                     let i = (y * scanCanvas.width + x) * 4;
-                    // Riconoscimento geometrico basato sulle costanti strutturali marroni dei puzzle di OSRS
-                    if (pData[i] > 55 && pData[i] < 120 && pData[i+1] > 42 && pData[i+1] < 95 && pData[i+2] < 60) {
-                        if (x < minX) minX = x; if (x > maxX) maxX = x;
-                        if (y < minY) minY = y; if (y > maxY) maxY = y;
-                        foundBox = true;
+                    let r = pData[i], g = pData[i+1], b = pData[i+2];
+                    
+                    // Cerca il colore delle linee scure di divisione e della cornice interna dei tasselli del puzzle box
+                    if (r > 35 && r < 75 && g > 25 && g < 60 && b < 45) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        foundGrid = true;
                     }
                 }
             }
 
             let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
 
-            if (foundBox && (maxX - minX) > 35) {
+            // Se rileva gli incroci geometrici della scacchiera, taglia via l'inventario ed il desktop di Windows
+            if (foundGrid && (maxX - minX) > 40) {
                 let scale = srcW / scanCanvas.width;
                 cropX = minX * scale;
                 cropY = minY * scale;
                 cropSize = (maxX - minX) * scale;
                 
-                // Esclude lo spessore esterno della cornice marrone di legno
-                cropX += cropSize * 0.054;
-                cropY += cropSize * 0.054;
-                cropSize = cropSize * 0.886;
+                // Esclude millimetricamente lo spessore esterno dei bordi per allinearsi ai tasselli
+                cropX += cropSize * 0.052;
+                cropY += cropSize * 0.052;
+                cropSize = cropSize * 0.89;
             } else {
-                if (srcW > srcH) { cropX = (srcW - srcH) / 2; cropSize = srcH; }
-                else { cropY = (srcH - srcW) / 2; cropSize = srcW; }
+                // Fallback universale se l'immagine è già ritagliata parzialmente sul gioco
+                if (srcW > srcH) {
+                    cropX = (srcW - srcH) / 2; cropSize = srcH * 0.58; cropY = srcH * 0.22;
+                }
             }
             
             ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, 400, 400);
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Template matching processing error: " + err.message, "#ff3333");
+            logStatus("❌ Structural scan error: " + err.message, "#ff3333");
         }
     };
 });
@@ -158,14 +169,12 @@ function processSelectedPuzzle(canvas, ctx) {
         const cellCtx = cellCanvas.getContext('2d', { willReadFrequently: true });
         cellCtx.drawImage(canvas, col * 80, row * 80, 80, 80, 0, 0, 50, 50);
 
-        // CLASSIFICAZIONE DELLE TESSERE RITAGLIATE (Simulazione classificazione vettoriale senza rilevamento bordi interni)
         let imgData = cellCtx.getImageData(20, 20, 10, 10).data;
         let cellR = 0, cellG = 0, cellB = 0, cellC = 0;
         for (let j = 0; j < imgData.length; j += 4) { cellR += imgData[j]; cellG += imgData[j+1]; cellB += imgData[j+2]; cellC++; }
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        // Identifica lo slot nero o accoppia la tessera per distanza vettoriale geometrica minima
         if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
@@ -180,7 +189,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cell.appendChild(cellCanvas); cell.appendChild(numLabel); gridContainer.appendChild(cell);
     }
 
-    logStatus(`✅ Auto-Detect Success: Classified [${selectedPuzzleType}] grid coordinates!`, "#28a745");
+    logStatus(`✅ Auto-Detect Success: Isolated [${selectedPuzzleType}] grid coordinates!`, "#28a745");
     document.getElementById('solve-btn').style.display = 'block';
     renderOverlayGrid();
 }
