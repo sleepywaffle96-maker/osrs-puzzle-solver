@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OSRS Ultimate Overlay Solver</title>
+    <title>OSRS Premium Overlay Solver</title>
     <style>
-        * { box-sizing: border-box; transition: all 0.15s ease; }
+        /* Reset e Stile Base */
+        * { box-sizing: border-box; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: radial-gradient(circle, #221a12 0%, #0d0a07 100%); 
@@ -15,34 +16,51 @@
         h1 { font-size: 1.6rem; color: #ffae00; margin: 10px 0 5px 0; font-weight: 800; text-transform: uppercase; text-align: center; text-shadow: 2px 2px #000; }
         .subtitle { font-size: 0.85rem; color: #8a8a8a; text-align: center; margin: 0 0 20px 0; max-width: 340px; }
         
-        /* 7 Visual Puzzle Selection Grid (Runeclues Style) */
-        .selector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 360px; margin-bottom: 25px; }
+        /* 7 Puzzle Selection Grid (Runeclues Style) */
+        .selector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; width: 100%; max-width: 360px; margin-bottom: 25px; }
+        
+        /* EFFETTO PULSANTE CHE SI GONFIA */
         .selector-btn { 
-            background: #2b211a; border: 2px solid #543f32; border-radius: 8px; padding: 6px; 
+            background: #2b211a; border: 2px solid #543f32; border-radius: 8px; padding: 8px; 
             text-align: center; color: #fff; font-weight: bold; cursor: pointer; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            will-change: transform; /* Ottimizza l'animazione su mobile */
         }
-        .selector-btn img { width: 70px; height: 70px; border-radius: 4px; margin-bottom: 6px; border: 1px solid #333; background: #000; }
-        .selector-btn span { font-size: 0.9rem; color: #ffae00; text-transform: uppercase; letter-spacing: 0.5px; }
-        .selector-btn.active { border-color: #ffae00; background: #47321c; box-shadow: 0 0 12px rgba(255,174,0,0.3); }
+        
+        /* Quando passi il mouse (Desktop) o tieni premuto (Mobile) il pulsante si allarga del 6% */
+        .selector-btn:hover { 
+            transform: scale(1.06); 
+            border-color: #ba8000;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.7);
+        }
+        
+        .selector-btn img { width: 80px; height: 80px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #1a1410; background: #000; pointer-events: none; }
+        .selector-btn span { font-size: 0.9rem; color: #ffae00; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; pointer-events: none; }
+        
+        /* Stato Selezionato */
+        .selector-btn.active { border-color: #ffae00; background: #47321c; transform: scale(1.03); box-shadow: 0 0 14px rgba(255,174,0,0.4); }
 
+        /* Contenitore Caricamento Foto */
         .upload-container { width: 100%; max-width: 360px; background: #1c1510; border: 2px dashed #ffae00; border-radius: 12px; padding: 25px 20px; text-align: center; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.6); }
         #file-input { display: none; }
         .upload-btn { display: inline-block; background: linear-gradient(135deg, #ffae00 0%, #d49100 100%); color: #000; padding: 14px 24px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(255,174,0,0.2); }
+        .upload-btn:hover { transform: scale(1.02); }
         #status { font-weight: 600; color: #ffae00; margin-top: 12px; font-size: 0.9rem; text-align: center; background: #110c08; padding: 10px; border-radius: 6px; border: 1px solid #3a2a1c; }
         
+        /* Griglia di elaborazione interna */
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 340px; margin-top: 20px; background: #110d0a; padding: 8px; border-radius: 12px; border: 2px solid #3a2b1f; display: none; }
         .cell { aspect-ratio: 1; background: #222; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #443322; }
         .cell canvas { width: 100%; height: 100%; object-fit: cover; }
         .cell-number { position: absolute; bottom: 3px; right: 3px; background: rgba(0,0,0,0.85); color: #ffae00; font-size: 10px; padding: 1px 4px; border-radius: 4px; font-family: monospace; font-weight: bold; }
         
         .action-btn { width: 100%; max-width: 340px; margin-top: 15px; padding: 16px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 12px rgba(40,167,69,0.3); display: none; }
+        .action-btn:hover { transform: scale(1.02); }
         .pip-btn { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); box-shadow: 0 4px 12px rgba(0,123,255,0.3); display: block !important; margin-top: 15px; }
         
         .nav-controls { display: flex; gap: 10px; width: 100%; max-width: 340px; margin-top: 15px; display: none; }
         .nav-btn { flex: 1; padding: 14px; font-weight: bold; background: #2b211a; color: #fff; border: 1px solid #543f32; border-radius: 8px; cursor: pointer; text-align: center; text-transform: uppercase; }
-        .nav-btn:active { background: #3a2e24; }
+        .nav-btn:hover { transform: scale(1.03); background: #3a2e24; }
 
         #solution { margin-top: 25px; background: #14100c; padding: 20px; border-radius: 12px; width: 100%; max-width: 340px; border-top: 4px solid #ffae00; display: none; text-align: center; border-left: 1px solid #2d2218; border-right: 1px solid #2d2218; border-bottom: 1px solid #2d2218; }
         #pip-video { display: none; }
@@ -51,41 +69,41 @@
 <body>
 
     <h1>Select Puzzle Box</h1>
-    <div class="subtitle">Click on your current clue scroll puzzle background to unlock overlay tools.</div>
+    <div class="subtitle">Click on your puzzle background. The grid will inflate slightly on selection.</div>
 
-    <!-- Step 1: 7 Selector buttons with custom CSS inline icons tracking OSRS pixel elements -->
+    <!-- Griglia dei bottoni collegata alle immagini locali caricate nel tuo archivio GitHub -->
     <div class="selector-grid">
         <div class="selector-btn" onclick="selectPuzzle('Troll', this)">
-            <img src="https://runescape.wiki" alt="Troll">
+            <img src="troll.png" alt="Troll">
             <span>Troll</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('Tree', this)">
-            <img src="https://runescape.wiki" alt="Tree">
+            <img src="tree.png" alt="Tree">
             <span>Tree</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('Castle', this)">
-            <img src="https://runescape.wiki" alt="Castle">
+            <img src="castle.png" alt="Castle">
             <span>Castle</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('Zulrah', this)">
-            <img src="https://runescape.wiki" alt="Zulrah">
+            <img src="zulrah.png" alt="Zulrah">
             <span>Zulrah</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('Cerberus', this)">
-            <img src="https://runescape.wiki" alt="Cerberus">
+            <img src="cerberus.png" alt="Cerberus">
             <span>Cerberus</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('Gnome', this)">
-            <img src="https://runescape.wiki" alt="Gnome">
+            <img src="gnome.png" alt="Gnome">
             <span>Gnome</span>
         </div>
         <div class="selector-btn" onclick="selectPuzzle('ToB', this)">
-            <img src="https://runescape.wiki" alt="Theatre of Blood">
+            <img src="tob.png" alt="Theatre of Blood">
             <span>ToB</span>
         </div>
     </div>
 
-    <!-- Step 2: Adaptive Upload Panel -->
+    <!-- Area Caricamento Foto -->
     <div class="upload-container" id="upload-box">
         <label for="file-input" class="upload-btn">📸 Select Screenshot</label>
         <input type="file" id="file-input" accept="image/*">
