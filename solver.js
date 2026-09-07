@@ -1,6 +1,5 @@
-// Official OSRS Puzzle Database - All 19 variants included
+// Universal OSRS Puzzle Color Signature Database - ALL 19 PUZZLES
 const PUZZLE_DATABASE = {
-    // --- Bosses & Creatures ---
     "Tree": { r: 215, g: 140, b: 105 },
     "Zulrah": { r: 45, g: 85, b: 75 },
     "Cerberus": { r: 140, g: 35, b: 25 },
@@ -9,8 +8,6 @@ const PUZZLE_DATABASE = {
     "Troll": { r: 115, g: 110, b: 100 },
     "Gnome": { r: 95, g: 130, b: 85 },
     "Theater of Blood": { r: 145, g: 30, b: 30 },
-
-    // --- Regional Clue Maps ---
     "Glough / Grand Tree": { r: 120, g: 110, b: 90 },
     "King Black Dragon / Wilderness": { r: 75, g: 65, b: 65 },
     "Kraken / Cove": { r: 50, g: 80, b: 90 },
@@ -33,7 +30,7 @@ let arrowMovesString = "";
 let detectedType = "Unknown";
 
 document.getElementById('file-input').addEventListener('change', function(e) {
-    const file = e.target.files;
+    const file = e.target.files[0];
     if (!file) return;
 
     document.getElementById('status').innerText = "⚡ Scanning image & detecting puzzle box...";
