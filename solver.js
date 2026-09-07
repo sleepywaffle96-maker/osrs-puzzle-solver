@@ -56,7 +56,6 @@ let originalImg = new Image();
 let calculatedSteps = []; 
 let currentStepIndex = 0;
 
-// Forza l'attributo di lettura frequente sulla canvas dell'overlay PiP
 const pipCanvas = document.createElement('canvas');
 pipCanvas.width = 300; pipCanvas.height = 300; 
 const pipCtx = pipCanvas.getContext('2d', { willReadFrequently: true });
@@ -83,7 +82,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
     const file = e.target.files;
     if (!file || file.length === 0 || !selectedPuzzleType) return;
 
-    logStatus("⚡ High-accuracy native scan running...");
+    logStatus("⚡ Locating sliding blank tile inside screenshot...");
     const img = new Image();
     img.src = URL.createObjectURL(file[0]); 
     
@@ -91,7 +90,6 @@ document.getElementById('file-input').addEventListener('change', function(e) {
         try {
             const canvas = document.createElement('canvas');
             canvas.width = 400; canvas.height = 400;
-            // Configurazione canva protetta per azzerare l'avviso dei DevTools
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             let srcW = img.naturalWidth, srcH = img.naturalHeight;
@@ -101,53 +99,44 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             let scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
             scanCtx.drawImage(img, 0, 0);
             
-            let minX = srcW, maxX = 0, minY = srcH, maxY = 0;
-            let foundBox = false;
-
-            // Scansione pixel per rintracciare la finestra di RuneLite posizionata a destra dello schermo intero
-            let stepX = Math.floor(srcW / 400) || 1;
-            let stepY = Math.floor(srcH / 400) || 1;
-
-            let startX = Math.floor(srcW * 0.35); 
-            let endX = Math.floor(srcW * 0.98);
-            let startY = Math.floor(srcH * 0.05);
-            let endY = Math.floor(srcH * 0.85);
-
-            for (let y = startY; y < endY; y += stepY) {
-                let rowData = scanCtx.getImageData(startX, y, endX - startX, 1).data;
-                for (let x = 0; x < rowData.length; x += 4 * stepX) {
-                    let r = rowData[x], g = rowData[x+1], b = rowData[x+2];
-                    
-                    // SOGLIA AD ALTA TOLLERANZA: Estesa per intercettare il marrone della cornice anche se compresso
-                    if (r > 38 && r < 135 && g > 28 && g < 105 && b < 72) {
-                        let realX = startX + (x / 4);
-                        if (realX < minX) minX = realX;
-                        if (realX > maxX) maxX = realX;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                        foundBox = true;
+            // 1. SCANSIONE DEL BLOCCO NERO (SPAZIO VUOTO 0)
+            let blankX = -1, blankY = -1;
+            let step = 4; // Passo veloce di scansione
+            
+            // Cerca un'area ad alta concentrazione di nero puro (lo slot vuoto)
+            for (let y = Math.floor(srcH * 0.1); y < srcH * 0.9; y += step) {
+                let row = scanCtx.getImageData(0, y, srcW, 1).data;
+                for (let x = Math.floor(srcW * 0.3); x < srcW * 0.95; x += step) {
+                    let i = x * 4;
+                    // Condizione nero OSRS slot vuoto: RGB inferiori a 12
+                    if (row[i] < 12 && row[i+1] < 12 && row[i+2] < 12) {
+                        blankX = x; blankY = y;
+                        break;
                     }
                 }
+                if (blankX !== -1) break;
             }
 
             let cropX = 0, cropY = 0, cropSize = Math.min(srcW, srcH);
 
-            // Se la scansione ad ampio spettro trova la cornice di RuneLite, taglia via il desktop di Windows
-            if (foundBox && (maxX - minX) > srcW * 0.08) {
-                cropX = minX;
-                cropY = minY;
-                cropSize = maxX - minX;
+            // 2. TRACCIAMENTO PROPORZIONALE DELLA GRIGLIA INTORNO AL NERO
+            if (blankX !== -1 && blankY !== -1) {
+                // Calcola le proporzioni fisse del puzzle box partendo dallo slot nero trovato
+                // Il puzzle box standard sui client RuneLite varia tra i 240 e i 360 pixel di larghezza
+                let assumedTileSize = srcH * 0.052; // Dimensione media stimata di un tassello in base all'altezza monitor
                 
-                // Centratura millimetrica sui 25 tasselli di gioco
-                cropX += cropSize * 0.052;
-                cropY += cropSize * 0.052;
-                cropSize = cropSize * 0.896;
+                cropSize = assumedTileSize * 5.4; 
+                cropX = blankX - (cropSize * 0.5); // Centra la cattura sull'area circostante
+                cropY = blankY - (cropSize * 0.5);
+
+                // Evita di sforare i bordi dello schermo
+                if (cropX < 0) cropX = srcW * 0.45;
+                if (cropY < 0) cropY = srcH * 0.20;
+                if (cropX + cropSize > srcW) cropX = srcW - cropSize;
             } else {
-                // Fallback di centraggio standard se la foto fosse già parzialmente ritagliata
+                // Fallback standard se il puzzle è coperto o non si trova lo slot nero
                 if (srcW > srcH) {
-                    cropX = (srcW - srcH) / 2; cropSize = srcH;
-                } else {
-                    cropY = (srcH - srcW) / 2; cropSize = srcW;
+                    cropX = (srcW - srcH) / 2; cropSize = srcH * 0.6; cropY = srcH * 0.2;
                 }
             }
             
@@ -155,7 +144,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             URL.revokeObjectURL(img.src);
             processSelectedPuzzle(canvas, ctx);
         } catch (err) {
-            logStatus("❌ Geometry conversion crash: " + err.message, "#ff3333");
+            logStatus("❌ Tracking scan failed: " + err.message, "#ff3333");
         }
     };
 });
@@ -179,7 +168,7 @@ function processSelectedPuzzle(canvas, ctx) {
         cellR = Math.floor(cellR / cellC); cellG = Math.floor(cellG / cellC); cellB = Math.floor(cellB / cellC);
 
         let detectedIndex = 0; 
-        if (!(cellR < 55 && cellG < 48 && cellB < 48)) {
+        if (!(cellR < 35 && cellG < 35 && cellB < 35)) {
             let minDiff = Infinity;
             activeTargetSet.forEach((target, tIdx) => {
                 let diff = Math.abs(cellR - target.r) + Math.abs(cellG - target.g) + Math.abs(cellB - target.b);
